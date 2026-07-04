@@ -46,9 +46,10 @@ py -m pytest
 job-agent mock-score
 job-agent mock-queue
 job-agent mock-dashboard
+job-agent mock-dashboard-report
 ```
 
-These commands read `examples/mock_jobs.json`, apply deterministic scoring rules, and print mock review queue and dashboard output. They do not read private tracker exports, `.env`, resumes, credentials, or production systems.
+These commands read `examples/mock_jobs.json`, apply deterministic scoring rules, and print mock review queue, dashboard JSON, and Markdown report output. They do not read private tracker exports, `.env`, resumes, credentials, or production systems.
 
 Useful docs:
 
