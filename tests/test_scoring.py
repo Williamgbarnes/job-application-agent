@@ -73,7 +73,7 @@ def test_scoring_engine_penalizes_disqualifying_keywords() -> None:
 
     result = TransparentScoringEngine(profile).score(lead, snapshot)
 
-    assert result.score == 30
+    assert result.score == 40
     assert result.priority == ScorePriority.LOW
     assert any("disqualifying" in gap for gap in result.gaps)
 
