@@ -33,6 +33,21 @@ Useful docs:
 - `docs/security_model.md`
 - `docs/real_data_boundary.md`
 - `docs/human_in_the_loop_policy.md`
+- `docs/github_free_plan.md`
+
+## GitHub Free Plan Boundary
+
+Repository automation and implementation choices must stay compatible with GitHub Free. CI should remain lightweight and mock-only, package publishing should not be part of the default path, and Codespaces support should remain optional rather than required.
+
+Current budget assumptions:
+
+- 2,000 GitHub Actions minutes per month.
+- 500 MB GitHub Packages storage.
+- 120 Codespaces core-hours per developer.
+- 15 GB Codespaces storage per developer.
+- Community support only.
+
+See `docs/github_free_plan.md` for the full policy and review checklist.
 
 ## Local Staging Checks
 
