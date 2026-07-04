@@ -34,6 +34,7 @@ Useful docs:
 - `docs/real_data_boundary.md`
 - `docs/human_in_the_loop_policy.md`
 - `docs/github_free_plan.md`
+- `docs/review_workflows.md`
 
 ## GitHub Free Plan Boundary
 
@@ -47,7 +48,7 @@ Current budget assumptions:
 - 15 GB Codespaces storage per developer.
 - Community support only.
 
-See `docs/github_free_plan.md` for the full policy and review checklist.
+See `docs/github_free_plan.md` for the full policy and review checklist. See `docs/review_workflows.md` for the current CI, PR Review, reviewdog, Bandit, and pytest behavior.
 
 ## Local Staging Checks
 
