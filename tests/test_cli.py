@@ -225,6 +225,64 @@ def test_mock_score_cli_prints_sanitized_score_reports(tmp_path: Path, capsys) -
     assert str(fixture_path) not in repr(output)
 
 
+def test_mock_queue_cli_filters_by_min_score_and_priority(
+    tmp_path: Path, capsys
+) -> None:
+    fixture_path = _write_mock_queue_fixture(tmp_path)
+
+    exit_code = main(
+        [
+            "mock-queue",
+            "--fixture",
+            str(fixture_path),
+            "--min-score",
+            "50",
+            "--priority",
+            "medium",
+        ]
+    )
+
+    assert exit_code == 0
+    output = json.loads(capsys.readouterr().out)
+    queue = output["mock_queue"]
+    assert queue["filters"] == {"min_score": 50, "priorities": ["medium"]}
+    assert queue["count"] == 1
+    assert queue["items"][0]["job_id"] == "job_mock_medium"
+    assert queue["items"][0]["rank"] == 1
+    assert queue["items"][0]["priority"] == "medium"
+    assert str(fixture_path) not in repr(output)
+
+
+def test_mock_queue_cli_accepts_repeated_priority_filters_and_reranks(
+    tmp_path: Path, capsys
+) -> None:
+    fixture_path = _write_mock_queue_fixture(tmp_path)
+
+    exit_code = main(
+        [
+            "mock-queue",
+            "--fixture",
+            str(fixture_path),
+            "--priority",
+            "high",
+            "--priority",
+            "medium",
+        ]
+    )
+
+    assert exit_code == 0
+    output = json.loads(capsys.readouterr().out)
+    queue = output["mock_queue"]
+    assert queue["filters"] == {"min_score": None, "priorities": ["high", "medium"]}
+    assert queue["count"] == 2
+    assert [item["job_id"] for item in queue["items"]] == [
+        "job_mock_high",
+        "job_mock_medium",
+    ]
+    assert [item["rank"] for item in queue["items"]] == [1, 2]
+    assert str(fixture_path) not in repr(output)
+
+
 def _write_env_file(tmp_path: Path, tracker_path: Path) -> Path:
     env_file = tmp_path / ".env"
     env_file.write_text(
@@ -237,3 +295,53 @@ def _write_env_file(tmp_path: Path, tracker_path: Path) -> Path:
         encoding="utf-8",
     )
     return env_file
+
+
+def _write_mock_queue_fixture(tmp_path: Path) -> Path:
+    fixture_path = tmp_path / "mock_jobs.json"
+    fixture_path.write_text(
+        json.dumps(
+            [
+                {
+                    "id": "job_mock_low",
+                    "source": "mock",
+                    "company": "Example Retail",
+                    "title": "Retail Associate",
+                    "location": "Onsite, United States",
+                    "work_arrangement": "onsite",
+                    "employment_type": "part-time",
+                    "compensation_max": 50000,
+                    "posting_url": "https://example.com/jobs/retail-associate",
+                    "requirements": ["Provide customer support"],
+                    "responsibilities": ["Maintain public demo inventory"],
+                },
+                {
+                    "id": "job_mock_high",
+                    "source": "mock",
+                    "company": "Example Systems",
+                    "title": "Engineering Manager",
+                    "location": "Remote, United States",
+                    "work_arrangement": "remote",
+                    "employment_type": "full-time",
+                    "compensation_max": 180000,
+                    "posting_url": "https://example.com/jobs/engineering-manager",
+                    "requirements": ["Lead engineering teams"],
+                    "responsibilities": ["Improve delivery systems"],
+                },
+                {
+                    "id": "job_mock_medium",
+                    "source": "mock",
+                    "company": "Example Studio",
+                    "title": "Engineering Manager",
+                    "location": "United States",
+                    "work_arrangement": "unknown",
+                    "employment_type": "unknown",
+                    "posting_url": "https://example.com/jobs/mock-manager",
+                    "requirements": ["Coordinate public-safe planning"],
+                    "responsibilities": ["Keep review notes sanitized"],
+                },
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return fixture_path
