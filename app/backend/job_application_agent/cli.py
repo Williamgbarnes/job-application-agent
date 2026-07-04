@@ -19,6 +19,7 @@ from job_application_agent.mock_jobs import (
     mock_scored_job_to_dict,
     score_mock_jobs,
 )
+from job_application_agent.review_queue import build_mock_review_queue, review_queue_to_dict
 from job_application_agent.tracker_quality import LocalTrackerQualityAnalyzer
 from job_application_agent.tracker_schema import map_tracker_headers
 
@@ -77,11 +78,12 @@ def main(argv: list[str] | None = None) -> int:
     mock_score_parser = subparsers.add_parser(
         "mock-score", help="Score sanitized mock job fixtures"
     )
-    mock_score_parser.add_argument(
-        "--fixture",
-        default=str(DEFAULT_MOCK_JOBS_PATH),
-        help="Path to sanitized mock jobs JSON fixture.",
+    _add_mock_fixture_arg(mock_score_parser)
+
+    mock_queue_parser = subparsers.add_parser(
+        "mock-queue", help="Print a sanitized mock priority queue"
     )
+    _add_mock_fixture_arg(mock_queue_parser)
 
     args = parser.parse_args(argv)
 
@@ -229,6 +231,17 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
 
+    if args.command == "mock-queue":
+        queue = build_mock_review_queue(Path(args.fixture))
+        print(
+            json.dumps(
+                {"mock_queue": review_queue_to_dict(queue)},
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 0
+
     return 1
 
 
@@ -252,6 +265,14 @@ def _add_header_args(parser: argparse.ArgumentParser) -> None:
         type=int,
         default=1,
         help="1-based row number containing headers. Defaults to 1.",
+    )
+
+
+def _add_mock_fixture_arg(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--fixture",
+        default=str(DEFAULT_MOCK_JOBS_PATH),
+        help="Path to sanitized mock jobs JSON fixture.",
     )
 
 
