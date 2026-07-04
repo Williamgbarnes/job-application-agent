@@ -47,15 +47,17 @@ job-agent mock-score
 job-agent mock-queue
 job-agent mock-dashboard
 job-agent mock-dashboard-report
+job-agent mock-package-plan
 ```
 
-These commands read `examples/mock_jobs.json`, apply deterministic scoring rules, and print mock review queue, dashboard JSON, and Markdown report output. They do not read private tracker exports, `.env`, resumes, credentials, or production systems.
+These commands read `examples/mock_jobs.json`, apply deterministic scoring rules, and print mock review queue, dashboard JSON, Markdown report, and package plan output. They do not read private tracker exports, `.env`, resumes, credentials, or production systems.
 
 Useful docs:
 
 - `docs/scoring.md`
 - `docs/phase_two_mock_queue.md`
 - `docs/phase_two_mock_dashboard.md`
+- `docs/phase_two_mock_package_plan.md`
 - `docs/local_sync_workflow.md`
 - `docs/agent_verification.md`
 - `docs/security_model.md`

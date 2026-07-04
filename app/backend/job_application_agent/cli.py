@@ -25,6 +25,11 @@ from job_application_agent.mock_jobs import (
     mock_scored_job_to_dict,
     score_mock_jobs,
 )
+from job_application_agent.mock_package_plan import (
+    DEFAULT_PACKAGE_PLAN_LIMIT,
+    build_mock_package_plan,
+    mock_package_plan_to_dict,
+)
 from job_application_agent.review_queue import (
     build_mock_review_queue,
     parse_score_priority,
@@ -110,6 +115,14 @@ def main(argv: list[str] | None = None) -> int:
     _add_mock_fixture_arg(mock_dashboard_report_parser)
     _add_mock_queue_filter_args(mock_dashboard_report_parser)
     _add_mock_dashboard_top_limit_arg(mock_dashboard_report_parser)
+
+    mock_package_plan_parser = subparsers.add_parser(
+        "mock-package-plan",
+        help="Print a sanitized mock application package plan",
+    )
+    _add_mock_fixture_arg(mock_package_plan_parser)
+    _add_mock_queue_filter_args(mock_package_plan_parser)
+    _add_mock_package_plan_top_limit_arg(mock_package_plan_parser)
 
     args = parser.parse_args(argv)
 
@@ -320,6 +333,29 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
 
+    if args.command == "mock-package-plan":
+        priorities = tuple(parse_score_priority(value) for value in args.priority or ())
+        plan = build_mock_package_plan(
+            Path(args.fixture),
+            min_score=args.min_score,
+            priorities=priorities,
+            top_limit=args.top_limit,
+        )
+        print(
+            json.dumps(
+                {
+                    "mock_package_plan": mock_package_plan_to_dict(
+                        plan,
+                        min_score=args.min_score,
+                        priorities=priorities,
+                    )
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 0
+
     return 1
 
 
@@ -377,6 +413,18 @@ def _add_mock_dashboard_top_limit_arg(parser: argparse.ArgumentParser) -> None:
         help=(
             "Maximum ranked mock queue items to include. Defaults to "
             f"{DEFAULT_DASHBOARD_TOP_LIMIT}."
+        ),
+    )
+
+
+def _add_mock_package_plan_top_limit_arg(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--top-limit",
+        type=_non_negative_int,
+        default=DEFAULT_PACKAGE_PLAN_LIMIT,
+        help=(
+            "Maximum mock package plan items to include. Defaults to "
+            f"{DEFAULT_PACKAGE_PLAN_LIMIT}."
         ),
     )
 
