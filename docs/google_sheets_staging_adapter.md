@@ -50,10 +50,35 @@ job-agent sheets-metadata --env-file .env
 
 The command prints a log-safe summary. It does not print the private local path.
 
+## Header discovery
+
+Use the header command to inspect public-safe column names from tracker tabs without reading or printing row data:
+
+```bash
+job-agent tracker-headers --env-file .env
+```
+
+By default, it inspects these tabs:
+
+```text
+Applications
+Daily Leads
+Contacts
+Rejected Applications
+Recruiter Apply
+```
+
+To inspect one tab or use a non-default header row:
+
+```bash
+job-agent tracker-headers --env-file .env --tab Applications --header-row 1
+```
+
 ## Safety constraints
 
 - No write methods are implemented.
 - No real spreadsheet IDs are committed.
 - No local tracker exports are committed.
+- Header discovery prints column names only, not row data.
 - Tests use mock/fake/local temporary workbooks only.
 - External submission remains disabled by default.

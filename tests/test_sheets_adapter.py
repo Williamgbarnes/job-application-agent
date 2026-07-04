@@ -1,13 +1,16 @@
 from pathlib import Path
 from typing import Any
 
+import pytest
 from openpyxl import Workbook
 
 from job_application_agent.config import RuntimeConfig
 from job_application_agent.integrations.sheets import (
+    DEFAULT_TRACKER_HEADER_TABS,
     GoogleSheetsAdapter,
     LocalExcelTrackerAdapter,
     MockSheetsAdapter,
+    SheetsAdapterError,
     build_sheets_adapter,
     spreadsheet_summary_from_google_payload,
 )
@@ -31,6 +34,14 @@ def test_mock_adapter_returns_expected_tracker_tabs() -> None:
 
     assert summary.title == "Mock Job Tracker"
     assert set(summary.tab_titles) == EXPECTED_TABS
+
+
+def test_mock_adapter_returns_expected_tracker_headers() -> None:
+    summary = MockSheetsAdapter().get_headers()
+
+    assert summary.tab_titles == DEFAULT_TRACKER_HEADER_TABS
+    assert summary.tabs[0].title == "Applications"
+    assert summary.tabs[0].headers == ("Company", "Role", "Status", "Date Applied")
 
 
 def test_build_sheets_adapter_defaults_to_mock() -> None:
@@ -87,6 +98,48 @@ def test_local_excel_adapter_reads_workbook_metadata(tmp_path: Path) -> None:
     assert summary.tabs[0].column_count == 2
     assert summary.tabs[0].frozen_row_count == 1
     assert str(tracker_path) not in repr(summary)
+
+
+def test_local_excel_adapter_reads_selected_tracker_headers(tmp_path: Path) -> None:
+    tracker_path = tmp_path / "staging_job_tracker.xlsx"
+    workbook = Workbook()
+    dashboard = workbook.active
+    dashboard.title = "Dashboard"
+    applications = workbook.create_sheet("Applications")
+    applications.append(["Company", "Role", "Status", "", None])
+    applications.append(["Example Co", "Engineering Manager", "Applied"])
+    contacts = workbook.create_sheet("Contacts")
+    contacts.append(["Name", "Company", "Email"])
+    workbook.save(tracker_path)
+
+    summary = LocalExcelTrackerAdapter(workbook_path=tracker_path).get_headers(
+        ["Applications", "Contacts"]
+    )
+
+    assert summary.tab_titles == ("Applications", "Contacts")
+    assert summary.tabs[0].headers == ("Company", "Role", "Status")
+    assert summary.tabs[1].headers == ("Name", "Company", "Email")
+    assert "Example Co" not in repr(summary)
+    assert str(tracker_path) not in repr(summary)
+
+
+def test_local_excel_adapter_reports_missing_header_tabs(tmp_path: Path) -> None:
+    tracker_path = tmp_path / "staging_job_tracker.xlsx"
+    workbook = Workbook()
+    workbook.active.title = "Applications"
+    workbook.save(tracker_path)
+
+    with pytest.raises(SheetsAdapterError, match="Contacts"):
+        LocalExcelTrackerAdapter(workbook_path=tracker_path).get_headers(
+            ["Applications", "Contacts"]
+        )
+
+
+def test_google_adapter_header_discovery_is_not_implemented() -> None:
+    adapter = GoogleSheetsAdapter(spreadsheet_id="private-id", service=FakeSheetsService({}))
+
+    with pytest.raises(SheetsAdapterError, match="not implemented"):
+        adapter.get_headers()
 
 
 def test_spreadsheet_summary_from_google_payload_is_log_safe() -> None:
