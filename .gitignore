@@ -1,0 +1,42 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+
+# Node / frontend
+node_modules/
+.next/
+out/
+coverage/
+
+# Local/private data
+data/private/
+data/production/
+exports/
+generated/
+application_materials/
+*.docx
+*.pdf
+*.xlsx
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
