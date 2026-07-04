@@ -1,0 +1,35 @@
+{
+  "id": "candidate_mock_001",
+  "profile_name": "Mock Engineering Leader",
+  "target_roles": [
+    "Senior Engineering Manager",
+    "Director of Engineering",
+    "Platform Engineering Manager"
+  ],
+  "approved_themes": [
+    "engineering leadership",
+    "delivery predictability",
+    "CI/CD",
+    "platform modernization",
+    "team development",
+    "cross-functional stakeholder alignment"
+  ],
+  "approved_metrics": [
+    {
+      "label": "Cycle time improvement",
+      "value": "reduced cycle time by 20%+",
+      "note": "Mock portfolio-safe metric"
+    },
+    {
+      "label": "Delivery throughput",
+      "value": "improved release throughput",
+      "note": "Mock portfolio-safe metric"
+    }
+  ],
+  "forbidden_claims": [
+    "Unverified certifications",
+    "Unsupported domain expertise",
+    "Invented tools or technologies",
+    "Inflated leadership scope"
+  ]
+}
