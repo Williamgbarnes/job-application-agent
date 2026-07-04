@@ -35,8 +35,14 @@ def test_render_mock_dashboard_markdown_includes_summary_and_top_items() -> None
     assert "| Average score | 61.67 |" in report
     assert "| High | 1 |" in report
     assert "| Review Now | 1 |" in report
-    assert "| 1 | high | Example High | Engineering Manager | 90 | high |" in report
-    assert "| 2 | medium | Example Medium | Engineering Manager | 65 | medium |" in report
+    assert (
+        "| 1 | high | Example High | Engineering Manager | 90 | high |"
+        in report
+    )
+    assert (
+        "| 2 | medium | Example Medium | Engineering Manager | 65 | medium |"
+        in report
+    )
     assert "| 3 | low |" not in report
 
 
