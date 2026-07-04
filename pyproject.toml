@@ -1,0 +1,19 @@
+[project]
+name = "job-application-agent"
+version = "0.1.0"
+description = "Public-safe job application copilot with mock-first, human-in-the-loop workflows."
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+google = [
+  "google-api-python-client>=2.140.0",
+  "google-auth>=2.30.0"
+]
+dev = [
+  "pytest>=8.0.0"
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["app/backend"]
+testpaths = ["tests"]
