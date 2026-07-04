@@ -19,6 +19,7 @@ from job_application_agent.mock_dashboard import (
     build_mock_dashboard,
     mock_dashboard_to_dict,
 )
+from job_application_agent.mock_dashboard_report import render_mock_dashboard_markdown
 from job_application_agent.mock_jobs import (
     DEFAULT_MOCK_JOBS_PATH,
     mock_scored_job_to_dict,
@@ -100,15 +101,15 @@ def main(argv: list[str] | None = None) -> int:
     )
     _add_mock_fixture_arg(mock_dashboard_parser)
     _add_mock_queue_filter_args(mock_dashboard_parser)
-    mock_dashboard_parser.add_argument(
-        "--top-limit",
-        type=_non_negative_int,
-        default=DEFAULT_DASHBOARD_TOP_LIMIT,
-        help=(
-            "Maximum ranked mock queue items to include. Defaults to "
-            f"{DEFAULT_DASHBOARD_TOP_LIMIT}."
-        ),
+    _add_mock_dashboard_top_limit_arg(mock_dashboard_parser)
+
+    mock_dashboard_report_parser = subparsers.add_parser(
+        "mock-dashboard-report",
+        help="Print a sanitized mock dashboard Markdown report",
     )
+    _add_mock_fixture_arg(mock_dashboard_report_parser)
+    _add_mock_queue_filter_args(mock_dashboard_report_parser)
+    _add_mock_dashboard_top_limit_arg(mock_dashboard_report_parser)
 
     args = parser.parse_args(argv)
 
@@ -301,6 +302,24 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
 
+    if args.command == "mock-dashboard-report":
+        priorities = tuple(parse_score_priority(value) for value in args.priority or ())
+        dashboard = build_mock_dashboard(
+            Path(args.fixture),
+            min_score=args.min_score,
+            priorities=priorities,
+            top_limit=args.top_limit,
+        )
+        print(
+            render_mock_dashboard_markdown(
+                dashboard,
+                min_score=args.min_score,
+                priorities=priorities,
+            ),
+            end="",
+        )
+        return 0
+
     return 1
 
 
@@ -347,6 +366,18 @@ def _add_mock_queue_filter_args(parser: argparse.ArgumentParser) -> None:
         action="append",
         default=None,
         help="Priority to include. Repeat for multiple values: high, medium, low.",
+    )
+
+
+def _add_mock_dashboard_top_limit_arg(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--top-limit",
+        type=_non_negative_int,
+        default=DEFAULT_DASHBOARD_TOP_LIMIT,
+        help=(
+            "Maximum ranked mock queue items to include. Defaults to "
+            f"{DEFAULT_DASHBOARD_TOP_LIMIT}."
+        ),
     )
 
 
