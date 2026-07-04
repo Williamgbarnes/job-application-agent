@@ -111,7 +111,7 @@ class LocalExcelTrackerAdapter:
 
         try:
             workbook = load_workbook(
-                filename=self._workbook_path, read_only=True, data_only=False
+                filename=self._workbook_path, read_only=False, data_only=False
             )
         except Exception as exc:  # pragma: no cover - depends on file corruption details
             raise SheetsAdapterError(
