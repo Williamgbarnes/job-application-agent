@@ -25,6 +25,17 @@ bash scripts/check-local.sh
 
 The local check script creates a repo-local `.venv`, installs development dependencies, and runs the public-safe lint, type, security, test, and mock CLI smoke checks. It does not require `.env`, private tracker exports, resumes, credentials, production IDs, or external write access.
 
+## Sync an Existing Checkout
+
+Keep GitHub as the source of truth and sync local machines with Git instead of ZIP files:
+
+```bash
+bash scripts/sync-local.sh
+bash scripts/check-local.sh
+```
+
+The sync script fetches and fast-forwards `main` by default. It exits before syncing if the working tree has uncommitted changes. See `docs/local_sync_workflow.md` for the full synced handoff model.
+
 ## Current Public Demo
 
 The current public demo path uses sanitized mock fixtures only:
@@ -44,6 +55,7 @@ Useful docs:
 - `docs/scoring.md`
 - `docs/phase_two_mock_queue.md`
 - `docs/phase_two_mock_dashboard.md`
+- `docs/local_sync_workflow.md`
 - `docs/security_model.md`
 - `docs/real_data_boundary.md`
 - `docs/human_in_the_loop_policy.md`
