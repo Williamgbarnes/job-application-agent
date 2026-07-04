@@ -189,6 +189,42 @@ def test_tracker_quality_cli_strict_fails_all_selected_gates(
     assert str(tracker_path) not in repr(output)
 
 
+def test_mock_score_cli_prints_sanitized_score_reports(tmp_path: Path, capsys) -> None:
+    fixture_path = tmp_path / "mock_jobs.json"
+    fixture_path.write_text(
+        json.dumps(
+            [
+                {
+                    "id": "job_mock_001",
+                    "source": "mock",
+                    "company": "Example Systems",
+                    "title": "Engineering Manager",
+                    "location": "Remote, United States",
+                    "work_arrangement": "remote",
+                    "employment_type": "full-time",
+                    "compensation_max": 180000,
+                    "posting_url": "https://example.com/jobs/engineering-manager",
+                    "requirements": ["Lead engineering teams"],
+                    "responsibilities": ["Improve delivery systems"],
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    exit_code = main(["mock-score", "--fixture", str(fixture_path)])
+
+    assert exit_code == 0
+    output = json.loads(capsys.readouterr().out)
+    assert output["mock_score_reports"]["count"] == 1
+    job = output["mock_score_reports"]["jobs"][0]
+    assert job["id"] == "job_mock_001"
+    assert job["company"] == "Example Systems"
+    assert job["score"] >= 0
+    assert job["rules"]
+    assert str(fixture_path) not in repr(output)
+
+
 def _write_env_file(tmp_path: Path, tracker_path: Path) -> Path:
     env_file = tmp_path / ".env"
     env_file.write_text(
