@@ -14,6 +14,11 @@ from job_application_agent.integrations.sheets import (
     DEFAULT_TRACKER_HEADER_TABS,
     build_sheets_adapter,
 )
+from job_application_agent.mock_dashboard import (
+    DEFAULT_DASHBOARD_TOP_LIMIT,
+    build_mock_dashboard,
+    mock_dashboard_to_dict,
+)
 from job_application_agent.mock_jobs import (
     DEFAULT_MOCK_JOBS_PATH,
     mock_scored_job_to_dict,
@@ -88,17 +93,21 @@ def main(argv: list[str] | None = None) -> int:
         "mock-queue", help="Print a sanitized mock priority queue"
     )
     _add_mock_fixture_arg(mock_queue_parser)
-    mock_queue_parser.add_argument(
-        "--min-score",
-        type=int,
-        default=None,
-        help="Only include mock queue items with this score or higher.",
+    _add_mock_queue_filter_args(mock_queue_parser)
+
+    mock_dashboard_parser = subparsers.add_parser(
+        "mock-dashboard", help="Print a sanitized mock dashboard summary"
     )
-    mock_queue_parser.add_argument(
-        "--priority",
-        action="append",
-        default=None,
-        help="Priority to include. Repeat for multiple values: high, medium, low.",
+    _add_mock_fixture_arg(mock_dashboard_parser)
+    _add_mock_queue_filter_args(mock_dashboard_parser)
+    mock_dashboard_parser.add_argument(
+        "--top-limit",
+        type=_non_negative_int,
+        default=DEFAULT_DASHBOARD_TOP_LIMIT,
+        help=(
+            "Maximum ranked mock queue items to include. Defaults to "
+            f"{DEFAULT_DASHBOARD_TOP_LIMIT}."
+        ),
     )
 
     args = parser.parse_args(argv)
@@ -269,6 +278,29 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
 
+    if args.command == "mock-dashboard":
+        priorities = tuple(parse_score_priority(value) for value in args.priority or ())
+        dashboard = build_mock_dashboard(
+            Path(args.fixture),
+            min_score=args.min_score,
+            priorities=priorities,
+            top_limit=args.top_limit,
+        )
+        print(
+            json.dumps(
+                {
+                    "mock_dashboard": mock_dashboard_to_dict(
+                        dashboard,
+                        min_score=args.min_score,
+                        priorities=priorities,
+                    )
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 0
+
     return 1
 
 
@@ -301,6 +333,28 @@ def _add_mock_fixture_arg(parser: argparse.ArgumentParser) -> None:
         default=str(DEFAULT_MOCK_JOBS_PATH),
         help="Path to sanitized mock jobs JSON fixture.",
     )
+
+
+def _add_mock_queue_filter_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--min-score",
+        type=int,
+        default=None,
+        help="Only include mock queue items with this score or higher.",
+    )
+    parser.add_argument(
+        "--priority",
+        action="append",
+        default=None,
+        help="Priority to include. Repeat for multiple values: high, medium, low.",
+    )
+
+
+def _non_negative_int(value: str) -> int:
+    parsed = int(value)
+    if parsed < 0:
+        raise argparse.ArgumentTypeError("value must be zero or greater")
+    return parsed
 
 
 if __name__ == "__main__":  # pragma: no cover
