@@ -30,21 +30,22 @@ jobs:
       - name: Run flake8
         run: |
           mkdir -p pr_check_results
-          python -m flake8 . 2>&1 | tee pr_check_results/flake8.txt || true
+          python -m flake8 . 2>&1 | tee pr_check_results/flake8.txt
 
       - name: Run mypy
         run: |
-          python -m mypy . 2>&1 | tee pr_check_results/mypy.txt || true
+          python -m mypy . 2>&1 | tee pr_check_results/mypy.txt
 
       - name: Run bandit
         run: |
-          python -m bandit -r . -q 2>&1 | tee pr_check_results/bandit.txt || true
+          python -m bandit -r . -q 2>&1 | tee pr_check_results/bandit.txt
 
       - name: Run pytest
         run: |
-          python -m pytest -q 2>&1 | tee pr_check_results/pytest.txt || true
+          python -m pytest -q 2>&1 | tee pr_check_results/pytest.txt
 
       - name: Post PR summary comment
+        if: always()
         uses: actions/github-script@v6
         with:
           script: |
