@@ -13,6 +13,18 @@ This repository uses mock data and sanitized examples only. It does not contain 
 - Track application status, follow-ups, and outcomes.
 - Demonstrate secure, production-minded architecture.
 
+## Run From Any Computer
+
+Use Git Bash from a fresh machine with Git and Python 3.11 or newer installed:
+
+```bash
+git clone https://github.com/Williamgbarnes/job-application-agent.git
+cd job-application-agent
+bash scripts/check-local.sh
+```
+
+The local check script creates a repo-local `.venv`, installs development dependencies, and runs the public-safe lint, type, security, test, and mock CLI smoke checks. It does not require `.env`, private tracker exports, resumes, credentials, production IDs, or external write access.
+
 ## Current Public Demo
 
 The current public demo path uses sanitized mock fixtures only:
@@ -22,14 +34,16 @@ py -m pip install -e ".[dev]"
 py -m pytest
 job-agent mock-score
 job-agent mock-queue
+job-agent mock-dashboard
 ```
 
-These commands read `examples/mock_jobs.json`, apply deterministic scoring rules, and print a mock review queue. They do not read private tracker exports, `.env`, resumes, credentials, or production systems.
+These commands read `examples/mock_jobs.json`, apply deterministic scoring rules, and print mock review queue and dashboard output. They do not read private tracker exports, `.env`, resumes, credentials, or production systems.
 
 Useful docs:
 
 - `docs/scoring.md`
 - `docs/phase_two_mock_queue.md`
+- `docs/phase_two_mock_dashboard.md`
 - `docs/security_model.md`
 - `docs/real_data_boundary.md`
 - `docs/human_in_the_loop_policy.md`
