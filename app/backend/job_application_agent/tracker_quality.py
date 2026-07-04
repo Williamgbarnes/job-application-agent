@@ -32,6 +32,10 @@ class RequiredFieldQuality:
     populated_count: int
     blank_count: int
 
+    @property
+    def has_blanks(self) -> bool:
+        return self.blank_count > 0
+
 
 @dataclass(frozen=True)
 class TabQualitySummary:
@@ -45,6 +49,10 @@ class TabQualitySummary:
     unmapped_headers: tuple[str, ...]
     required_fields: tuple[RequiredFieldQuality, ...]
     truncated: bool
+
+    @property
+    def has_required_blanks(self) -> bool:
+        return any(field.has_blanks for field in self.required_fields)
 
 
 @dataclass(frozen=True)
@@ -61,6 +69,23 @@ class TrackerQualitySummary:
     @property
     def is_schema_complete(self) -> bool:
         return all(tab.is_schema_complete for tab in self.tabs)
+
+    @property
+    def has_required_blanks(self) -> bool:
+        return any(tab.has_required_blanks for tab in self.tabs)
+
+    def failed_quality_gates(
+        self,
+        *,
+        fail_on_incomplete_schema: bool = False,
+        fail_on_required_blanks: bool = False,
+    ) -> tuple[str, ...]:
+        failures: list[str] = []
+        if fail_on_incomplete_schema and not self.is_schema_complete:
+            failures.append("incomplete_schema")
+        if fail_on_required_blanks and self.has_required_blanks:
+            failures.append("required_blanks")
+        return tuple(failures)
 
 
 class LocalTrackerQualityAnalyzer:
