@@ -1,17 +1,25 @@
 """Read-only tracker metadata adapters.
 
-The adapters intentionally start with spreadsheet metadata and tab discovery only.
-They do not expose write methods and do not hard-code private spreadsheet IDs
-or local private file paths.
+The adapters intentionally start with spreadsheet metadata, tab discovery, and
+header discovery only. They do not expose write methods and do not hard-code
+private spreadsheet IDs or local private file paths.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping, Protocol
+from typing import Any, Mapping, Protocol, Sequence
 
 from job_application_agent.config import ConfigurationError, RuntimeConfig
+
+DEFAULT_TRACKER_HEADER_TABS = (
+    "Applications",
+    "Daily Leads",
+    "Contacts",
+    "Rejected Applications",
+    "Recruiter Apply",
+)
 
 
 class SheetsAdapterError(RuntimeError):
@@ -48,15 +56,55 @@ class SpreadsheetSummary:
         return tuple(tab.title for tab in self.tabs)
 
 
+@dataclass(frozen=True)
+class SheetHeaders:
+    """Public-safe header summary for one tracker tab."""
+
+    title: str
+    index: int
+    header_row: int
+    headers: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class TrackerHeadersSummary:
+    """Public-safe tracker header summary.
+
+    Cell values below the header row are deliberately excluded.
+    """
+
+    tabs: tuple[SheetHeaders, ...]
+
+    @property
+    def tab_titles(self) -> tuple[str, ...]:
+        return tuple(tab.title for tab in self.tabs)
+
+
 class SheetsMetadataProvider(Protocol):
     """Protocol shared by mock, local-file, and Google-backed adapters."""
 
     def get_metadata(self) -> SpreadsheetSummary:
         """Return read-only spreadsheet metadata."""
 
+    def get_headers(
+        self,
+        tab_titles: Sequence[str] | None = None,
+        *,
+        header_row: int = 1,
+    ) -> TrackerHeadersSummary:
+        """Return read-only tracker header metadata."""
+
 
 class MockSheetsAdapter:
     """Mock adapter for public demos and tests."""
+
+    MOCK_HEADERS: Mapping[str, tuple[str, ...]] = {
+        "Applications": ("Company", "Role", "Status", "Date Applied"),
+        "Daily Leads": ("Company", "Role", "URL", "Match Score"),
+        "Contacts": ("Name", "Company", "Email", "Last Contacted"),
+        "Rejected Applications": ("Company", "Role", "Status", "Archive Reason"),
+        "Recruiter Apply": ("Company", "Role", "Recruiter", "Next Step"),
+    }
 
     def __init__(self, summary: SpreadsheetSummary | None = None) -> None:
         self._summary = summary or SpreadsheetSummary(
@@ -79,6 +127,26 @@ class MockSheetsAdapter:
     def get_metadata(self) -> SpreadsheetSummary:
         return self._summary
 
+    def get_headers(
+        self,
+        tab_titles: Sequence[str] | None = None,
+        *,
+        header_row: int = 1,
+    ) -> TrackerHeadersSummary:
+        selected_titles = tuple(tab_titles or DEFAULT_TRACKER_HEADER_TABS)
+        metadata_by_title = {tab.title: tab for tab in self._summary.tabs}
+        return TrackerHeadersSummary(
+            tabs=tuple(
+                SheetHeaders(
+                    title=title,
+                    index=metadata_by_title.get(title, SheetTab(title, 0, 0)).index,
+                    header_row=header_row,
+                    headers=self.MOCK_HEADERS.get(title, ()),
+                )
+                for title in selected_titles
+            )
+        )
+
 
 class LocalExcelTrackerAdapter:
     """Read-only adapter for a private local `.xlsx` tracker export."""
@@ -96,28 +164,7 @@ class LocalExcelTrackerAdapter:
         return cls(workbook_path=config.staging_tracker_path)
 
     def get_metadata(self) -> SpreadsheetSummary:
-        if not self._workbook_path.exists():
-            raise SheetsAdapterError(
-                "Local staging tracker export was not found. Confirm STAGING_TRACKER_PATH."
-            )
-
-        try:
-            from openpyxl import load_workbook
-        except ImportError as exc:  # pragma: no cover - import depends on optional deps
-            raise SheetsAdapterError(
-                "Local Excel support requires openpyxl. Install with: "
-                "pip install -e '.[excel]'"
-            ) from exc
-
-        try:
-            workbook = load_workbook(
-                filename=self._workbook_path, read_only=False, data_only=False
-            )
-        except Exception as exc:  # pragma: no cover - depends on file corruption details
-            raise SheetsAdapterError(
-                "Failed to read local staging tracker export. Confirm it is a valid .xlsx file."
-            ) from exc
-
+        workbook = self._load_workbook()
         try:
             tabs = tuple(
                 SheetTab(
@@ -139,6 +186,65 @@ class LocalExcelTrackerAdapter:
             time_zone=None,
             tabs=tabs,
         )
+
+    def get_headers(
+        self,
+        tab_titles: Sequence[str] | None = None,
+        *,
+        header_row: int = 1,
+    ) -> TrackerHeadersSummary:
+        if header_row < 1:
+            raise ConfigurationError("header_row must be 1 or greater.")
+
+        selected_titles = tuple(tab_titles or DEFAULT_TRACKER_HEADER_TABS)
+        workbook = self._load_workbook()
+        try:
+            worksheets_by_title = {worksheet.title: worksheet for worksheet in workbook.worksheets}
+            missing_titles = [
+                title for title in selected_titles if title not in worksheets_by_title
+            ]
+            if missing_titles:
+                raise SheetsAdapterError(
+                    "Local staging tracker is missing expected tabs: "
+                    + ", ".join(missing_titles)
+                )
+
+            tabs = tuple(
+                SheetHeaders(
+                    title=title,
+                    index=workbook.worksheets.index(worksheets_by_title[title]),
+                    header_row=header_row,
+                    headers=_read_header_row(worksheets_by_title[title], header_row),
+                )
+                for title in selected_titles
+            )
+        finally:
+            workbook.close()
+
+        return TrackerHeadersSummary(tabs=tabs)
+
+    def _load_workbook(self) -> Any:
+        if not self._workbook_path.exists():
+            raise SheetsAdapterError(
+                "Local staging tracker export was not found. Confirm STAGING_TRACKER_PATH."
+            )
+
+        try:
+            from openpyxl import load_workbook
+        except ImportError as exc:  # pragma: no cover - import depends on optional deps
+            raise SheetsAdapterError(
+                "Local Excel support requires openpyxl. Install with: "
+                "pip install -e '.[excel]'"
+            ) from exc
+
+        try:
+            return load_workbook(
+                filename=self._workbook_path, read_only=False, data_only=False
+            )
+        except Exception as exc:  # pragma: no cover - depends on file corruption details
+            raise SheetsAdapterError(
+                "Failed to read local staging tracker export. Confirm it is a valid .xlsx file."
+            ) from exc
 
 
 class GoogleSheetsAdapter:
@@ -187,6 +293,17 @@ class GoogleSheetsAdapter:
             ) from exc
 
         return spreadsheet_summary_from_google_payload(payload)
+
+    def get_headers(
+        self,
+        tab_titles: Sequence[str] | None = None,
+        *,
+        header_row: int = 1,
+    ) -> TrackerHeadersSummary:
+        raise SheetsAdapterError(
+            "Header discovery for live Google Sheets is not implemented yet. "
+            "Use STAGING_TRACKER_PATH for local tracker header discovery."
+        )
 
 
 def build_sheets_adapter(config: RuntimeConfig) -> SheetsMetadataProvider:
@@ -245,6 +362,24 @@ def _build_google_sheets_service() -> Any:
         scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"]
     )
     return build("sheets", "v4", credentials=credentials, cache_discovery=False)
+
+
+def _read_header_row(worksheet: Any, header_row: int) -> tuple[str, ...]:
+    values = next(
+        worksheet.iter_rows(
+            min_row=header_row,
+            max_row=header_row,
+            values_only=True,
+        ),
+        (),
+    )
+    return tuple(_normalize_header(value) for value in values if _normalize_header(value))
+
+
+def _normalize_header(value: Any) -> str:
+    if value is None:
+        return ""
+    return str(value).strip()
 
 
 def _frozen_row_count(freeze_panes: str | None) -> int | None:
