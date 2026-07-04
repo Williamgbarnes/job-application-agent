@@ -149,6 +149,13 @@ def _summarize_tab_quality(
             else:
                 populated_counts[field_name] += 1
 
+    _count_missing_required_fields_as_blank(
+        required_fields,
+        required_columns,
+        blank_counts,
+        scanned_records=scanned_records,
+    )
+
     return TabQualitySummary(
         title=tab_mapping.title,
         scanned_records=scanned_records,
@@ -178,6 +185,18 @@ def _required_column_indexes(
         for field in mapped_fields
         if field.canonical_field in required_field_set
     }
+
+
+def _count_missing_required_fields_as_blank(
+    required_fields: tuple[str, ...],
+    required_columns: dict[str, int],
+    blank_counts: dict[str, int],
+    *,
+    scanned_records: int,
+) -> None:
+    for field_name in required_fields:
+        if field_name not in required_columns:
+            blank_counts[field_name] = scanned_records
 
 
 def _load_workbook(path: Path) -> Any:
