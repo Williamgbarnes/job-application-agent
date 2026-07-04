@@ -72,6 +72,7 @@ class RuntimeConfig:
     dry_run: bool = True
     require_human_approval: bool = True
     allow_external_submission: bool = False
+    staging_tracker_path: Path | None = None
     google_sheets_staging_id: str | None = None
     google_sheets_production_id: str | None = None
 
@@ -87,6 +88,7 @@ class RuntimeConfig:
             allow_external_submission=parse_bool(
                 values.get("ALLOW_EXTERNAL_SUBMISSION"), default=False
             ),
+            staging_tracker_path=_optional_path(values.get("STAGING_TRACKER_PATH")),
             google_sheets_staging_id=_blank_to_none(values.get("GOOGLE_SHEETS_STAGING_ID")),
             google_sheets_production_id=_blank_to_none(
                 values.get("GOOGLE_SHEETS_PRODUCTION_ID")
@@ -116,9 +118,12 @@ class RuntimeConfig:
                 "External submission cannot be enabled without human approval."
             )
 
-        if self.runtime_mode == "staging" and not self.google_sheets_staging_id:
+        if self.runtime_mode == "staging" and not (
+            self.staging_tracker_path or self.google_sheets_staging_id
+        ):
             raise ConfigurationError(
-                "GOOGLE_SHEETS_STAGING_ID is required when RUNTIME_MODE=staging."
+                "STAGING_TRACKER_PATH or GOOGLE_SHEETS_STAGING_ID is required "
+                "when RUNTIME_MODE=staging."
             )
 
         if self.runtime_mode == "production" and not self.google_sheets_production_id:
@@ -135,6 +140,7 @@ class RuntimeConfig:
             "dry_run": self.dry_run,
             "require_human_approval": self.require_human_approval,
             "allow_external_submission": self.allow_external_submission,
+            "has_staging_tracker_path": bool(self.staging_tracker_path),
             "has_google_sheets_staging_id": bool(self.google_sheets_staging_id),
             "has_google_sheets_production_id": bool(self.google_sheets_production_id),
         }
@@ -145,3 +151,10 @@ def _blank_to_none(value: str | bool | None) -> str | None:
         return None
     stripped = value.strip()
     return stripped or None
+
+
+def _optional_path(value: str | bool | None) -> Path | None:
+    text = _blank_to_none(value)
+    if text is None:
+        return None
+    return Path(text)
