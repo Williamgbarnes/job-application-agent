@@ -14,6 +14,11 @@ from job_application_agent.integrations.sheets import (
     DEFAULT_TRACKER_HEADER_TABS,
     build_sheets_adapter,
 )
+from job_application_agent.mock_jobs import (
+    DEFAULT_MOCK_JOBS_PATH,
+    mock_scored_job_to_dict,
+    score_mock_jobs,
+)
 from job_application_agent.tracker_quality import LocalTrackerQualityAnalyzer
 from job_application_agent.tracker_schema import map_tracker_headers
 
@@ -67,6 +72,15 @@ def main(argv: list[str] | None = None) -> int:
         "--strict",
         action="store_true",
         help="Enable all tracker quality gates.",
+    )
+
+    mock_score_parser = subparsers.add_parser(
+        "mock-score", help="Score sanitized mock job fixtures"
+    )
+    mock_score_parser.add_argument(
+        "--fixture",
+        default=str(DEFAULT_MOCK_JOBS_PATH),
+        help="Path to sanitized mock jobs JSON fixture.",
     )
 
     args = parser.parse_args(argv)
@@ -194,6 +208,25 @@ def main(argv: list[str] | None = None) -> int:
         )
         if failed_quality_gates:
             return QUALITY_GATE_FAILURE_EXIT_CODE
+        return 0
+
+    if args.command == "mock-score":
+        scored_jobs = score_mock_jobs(Path(args.fixture))
+        print(
+            json.dumps(
+                {
+                    "mock_score_reports": {
+                        "count": len(scored_jobs),
+                        "jobs": [
+                            mock_scored_job_to_dict(scored_job)
+                            for scored_job in scored_jobs
+                        ],
+                    },
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
         return 0
 
     return 1
