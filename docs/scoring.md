@@ -49,6 +49,36 @@ Scores are clamped to the `0` to `100` range.
 | `50` to `74` | `medium` |
 | `0` to `49` | `low` |
 
+## Mock scoring CLI
+
+Use the mock scoring command to score sanitized public fixtures:
+
+```bash
+job-agent mock-score
+```
+
+By default, the command reads:
+
+```text
+examples/mock_jobs.json
+```
+
+To use a different sanitized fixture:
+
+```bash
+job-agent mock-score --fixture examples/mock_jobs.json
+```
+
+The command prints JSON score reports with:
+
+- mock job ID
+- mock company and title
+- score and priority
+- strengths and gaps
+- rule-level scoring details
+
+This command is for public demo and local development only. It does not read private tracker exports, `.env`, resumes, generated materials, or production systems.
+
 ## Safety constraints
 
 - No external API calls.
@@ -56,10 +86,12 @@ Scores are clamped to the `0` to `100` range.
 - No resumes or generated application materials.
 - No autonomous application behavior.
 - Rule rationales should explain scoring without exposing private data.
+- Mock CLI output must use sanitized fixtures only.
 
 ## Local tests
 
 ```bash
 py -m pytest tests/test_scoring.py -q
+py -m pytest tests/test_mock_jobs.py -q
 py -m pytest
 ```
