@@ -33,7 +33,10 @@ def test_dashboard_summary_counts_scores_and_recommendations() -> None:
         priorities=(ScorePriority.HIGH, ScorePriority.MEDIUM),
     )
 
-    assert output["filters"] == {"min_score": 50, "priorities": ["high", "medium"]}
+    assert output["filters"] == {
+        "min_score": 50,
+        "priorities": ["high", "medium"],
+    }
     assert output["summary"]["count"] == 3
     assert output["summary"]["priority_counts"] == {
         "high": 1,
@@ -50,7 +53,10 @@ def test_dashboard_summary_counts_scores_and_recommendations() -> None:
         "max": 90,
         "min": 30,
     }
-    assert [item["job_id"] for item in output["top_items"]] == ["high", "medium"]
+    assert [item["job_id"] for item in output["top_items"]] == [
+        "high",
+        "medium",
+    ]
 
 
 def test_dashboard_handles_empty_queue() -> None:
@@ -109,7 +115,9 @@ def test_mock_dashboard_cli_prints_sanitized_summary(
     assert dashboard["summary"]["priority_counts"]["high"] == 1
     assert dashboard["summary"]["priority_counts"]["medium"] == 1
     assert dashboard["top_limit"] == 1
-    assert [item["job_id"] for item in dashboard["top_items"]] == ["job_mock_high"]
+    assert [item["job_id"] for item in dashboard["top_items"]] == [
+        "job_mock_high",
+    ]
     assert str(fixture_path) not in repr(output)
 
 
