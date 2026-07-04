@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=70.0"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "job-application-agent"
 version = "0.1.0"
@@ -13,6 +17,12 @@ google = [
 dev = [
   "pytest>=8.0.0"
 ]
+
+[project.scripts]
+job-agent = "job_application_agent.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["app/backend"]
 
 [tool.pytest.ini_options]
 pythonpath = ["app/backend"]
