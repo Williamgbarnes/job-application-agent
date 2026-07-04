@@ -25,6 +25,22 @@ Codex must not:
 - send email, messages, applications, form submissions, or external write requests;
 - add production integrations without explicit configuration gates and human approval.
 
+## Agent verification mode
+
+Future ChatGPT, Codex, or other coding-agent sessions may not have a live Git checkout mounted locally. In that case, do not claim that local tests were run.
+
+Use this verification hierarchy:
+
+1. If a live checkout is mounted, run `bash scripts/check-local.sh` before reporting success.
+2. If no live checkout is mounted, make changes on a GitHub branch, open or update a pull request, and use GitHub Actions as the verification source.
+3. For pull requests, verify the latest head SHA with the required public checks:
+   - `CI`
+   - `PR Review`
+4. If a check fails, read the failing job steps/logs, patch the branch, and verify the new head SHA.
+5. In the final response, state exactly what was verified: local script, CI, PR Review, or not run.
+
+Do not use uploaded ZIP files as a synchronized working copy. ZIP files are snapshots only and can drift from GitHub. Use GitHub branches, pull requests, and Actions for durable agent handoff.
+
 ## GitHub Free plan constraints
 
 Design repository automation and implementation choices to work on GitHub Free without paid infrastructure assumptions.
@@ -58,13 +74,19 @@ Implementation rules:
 
 Use Git Bash commands by default.
 
-Install the package and development dependencies:
+Run the complete portable local check from any synced checkout:
+
+```bash
+bash scripts/check-local.sh
+```
+
+Install the package and development dependencies manually:
 
 ```bash
 py -m pip install -e ".[dev]"
 ```
 
-Run the full test suite:
+Run the full test suite manually:
 
 ```bash
 py -m pytest
@@ -76,6 +98,7 @@ Run public demo commands:
 job-agent mock-score
 job-agent mock-queue
 job-agent mock-queue --min-score 75 --priority high
+job-agent mock-dashboard
 ```
 
 Run local staging checks only when a private `.env` exists locally and the user explicitly asks for staging verification:

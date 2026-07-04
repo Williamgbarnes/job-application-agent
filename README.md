@@ -56,6 +56,7 @@ Useful docs:
 - `docs/phase_two_mock_queue.md`
 - `docs/phase_two_mock_dashboard.md`
 - `docs/local_sync_workflow.md`
+- `docs/agent_verification.md`
 - `docs/security_model.md`
 - `docs/real_data_boundary.md`
 - `docs/human_in_the_loop_policy.md`
