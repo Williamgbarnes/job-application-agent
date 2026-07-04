@@ -23,7 +23,22 @@ This repository must remain usable on GitHub Free. Do not introduce repository f
 - Set `timeout-minutes` on every job.
 - Use `concurrency` with `cancel-in-progress: true` so stale pushes do not keep consuming minutes.
 - Keep default workflow permissions read-only unless a write permission is explicitly required and approved.
+- Limit PR workflow write permissions to review/check feedback only.
 - Do not upload large artifacts by default. If artifacts are needed, keep retention short and document expected size.
+
+## Current review workflow
+
+The PR Review workflow is intentionally small and public-safe.
+
+It should:
+
+- install check dependencies from `requirements-dev.txt`;
+- report `flake8` and `mypy` findings through reviewdog pull request annotations;
+- run Bandit against `app/backend/job_application_agent` only;
+- run pytest as a normal failing workflow step;
+- avoid posting large raw-log summary comments by default.
+
+See `docs/review_workflows.md` for operational details.
 
 ## GitHub Packages and artifact rules
 
@@ -50,3 +65,4 @@ Before merging changes that touch CI, packaging, development environments, or ge
 - No default workflow uses paid runners, larger runners, GPUs, or self-hosted infrastructure.
 - No default path publishes packages or stores large artifacts.
 - Any expected Actions, Packages, or Codespaces consumption is described in the PR.
+- Any workflow write permission is limited to PR review/check feedback.
