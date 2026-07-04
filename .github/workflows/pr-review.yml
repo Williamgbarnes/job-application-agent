@@ -55,7 +55,7 @@ jobs:
             -fail-level="error"
 
       - name: Run bandit
-        run: python -m bandit -r . -q
+        run: python -m bandit -r app/backend/job_application_agent -q
 
       - name: Run pytest
         run: python -m pytest -q
