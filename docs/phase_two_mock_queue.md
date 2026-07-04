@@ -1,0 +1,61 @@
+# Phase 2 Mock Queue
+
+The Phase 2 mock queue shows how sanitized mock job scores can be organized for human review.
+
+It uses public fixtures only and does not read private tracker exports, `.env`, resumes, generated materials, credentials, or production systems.
+
+## Command
+
+```bash
+job-agent mock-queue
+```
+
+By default, the command reads:
+
+```text
+examples/mock_jobs.json
+```
+
+To use another sanitized fixture:
+
+```bash
+job-agent mock-queue --fixture examples/mock_jobs.json
+```
+
+## Output
+
+The command prints JSON with:
+
+- queue item rank
+- mock job ID
+- mock company and title
+- score
+- priority
+- review bucket
+- rationale
+
+Review buckets are intentionally limited to:
+
+| Priority | Bucket |
+| --- | --- |
+| `high` | `review_now` |
+| `medium` | `review_later` |
+| `low` | `hold` |
+
+## Safety constraints
+
+- No external API calls.
+- No writes.
+- No submissions.
+- No contacting or messaging.
+- No private tracker rows.
+- No private paths, IDs, or credentials.
+- Sanitized mock fixtures only.
+
+## Local checks
+
+```bash
+py -m pytest tests/test_review_queue.py -q
+py -m pytest
+job-agent mock-queue
+```
