@@ -1,10 +1,12 @@
+from pathlib import Path
 from typing import Any
 
-import pytest
+from openpyxl import Workbook
 
 from job_application_agent.config import RuntimeConfig
 from job_application_agent.integrations.sheets import (
     GoogleSheetsAdapter,
+    LocalExcelTrackerAdapter,
     MockSheetsAdapter,
     build_sheets_adapter,
     spreadsheet_summary_from_google_payload,
@@ -37,7 +39,20 @@ def test_build_sheets_adapter_defaults_to_mock() -> None:
     assert isinstance(adapter, MockSheetsAdapter)
 
 
-def test_build_sheets_adapter_uses_google_for_staging() -> None:
+def test_build_sheets_adapter_uses_local_excel_for_staging_when_path_exists() -> None:
+    config = RuntimeConfig.from_mapping(
+        {
+            "RUNTIME_MODE": "staging",
+            "STAGING_TRACKER_PATH": "C:/private/staging_job_tracker.xlsx",
+        }
+    )
+
+    adapter = build_sheets_adapter(config)
+
+    assert isinstance(adapter, LocalExcelTrackerAdapter)
+
+
+def test_build_sheets_adapter_uses_google_for_staging_without_local_path() -> None:
     config = RuntimeConfig.from_mapping(
         {
             "RUNTIME_MODE": "staging",
@@ -48,6 +63,30 @@ def test_build_sheets_adapter_uses_google_for_staging() -> None:
     adapter = build_sheets_adapter(config)
 
     assert isinstance(adapter, GoogleSheetsAdapter)
+
+
+def test_local_excel_adapter_reads_workbook_metadata(tmp_path: Path) -> None:
+    tracker_path = tmp_path / "staging_job_tracker.xlsx"
+    workbook = Workbook()
+    dashboard = workbook.active
+    dashboard.title = "Dashboard"
+    dashboard.freeze_panes = "A2"
+    dashboard.append(["Metric", "Value"])
+    dashboard.append(["Applications", 3])
+    applications = workbook.create_sheet("Applications")
+    applications.append(["Company", "Role"])
+    applications.append(["Example Co", "Engineering Manager"])
+    workbook.create_sheet("Daily Leads")
+    workbook.save(tracker_path)
+
+    summary = LocalExcelTrackerAdapter(workbook_path=tracker_path).get_metadata()
+
+    assert summary.title == "staging_job_tracker"
+    assert summary.tab_titles == ("Dashboard", "Applications", "Daily Leads")
+    assert summary.tabs[0].row_count == 2
+    assert summary.tabs[0].column_count == 2
+    assert summary.tabs[0].frozen_row_count == 1
+    assert str(tracker_path) not in repr(summary)
 
 
 def test_spreadsheet_summary_from_google_payload_is_log_safe() -> None:
