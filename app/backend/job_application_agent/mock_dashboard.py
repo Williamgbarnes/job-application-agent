@@ -1,7 +1,7 @@
 """Public-safe Phase 2 mock dashboard helpers.
 
-The mock dashboard aggregates deterministic mock scoring and review queue output for
-local demos. It never reads private tracker exports, credentials, resumes,
+The mock dashboard aggregates deterministic mock scoring and review queue output
+for local demos. It never reads private tracker exports, credentials, resumes,
 generated materials, or production systems.
 """
 
