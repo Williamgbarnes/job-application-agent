@@ -79,6 +79,48 @@ def test_tracker_schema_cli_prints_log_safe_mapping(
     assert str(tracker_path) not in repr(output)
 
 
+def test_tracker_quality_cli_prints_log_safe_counts(
+    tmp_path: Path, capsys
+) -> None:
+    tracker_path = tmp_path / "staging_job_tracker.xlsx"
+    workbook = Workbook()
+    workbook.active.title = "Dashboard"
+    applications = workbook.create_sheet("Applications")
+    applications.append(["Company", "Role", "Status"])
+    applications.append(["Example Co", "Engineering Manager", "Applied"])
+    applications.append([None, "Architect", "Applied"])
+    workbook.save(tracker_path)
+
+    env_file = _write_env_file(tmp_path, tracker_path)
+
+    exit_code = main(
+        [
+            "tracker-quality",
+            "--env-file",
+            str(env_file),
+            "--tab",
+            "Applications",
+            "--max-records",
+            "10",
+        ]
+    )
+
+    assert exit_code == 0
+    output = json.loads(capsys.readouterr().out)
+    tab = output["tracker_quality"]["tabs"][0]
+    assert output["tracker_quality"]["scanned_records"] == 2
+    assert tab["title"] == "Applications"
+    assert tab["scanned_records"] == 2
+    company_quality = next(
+        field for field in tab["required_fields"] if field["canonical_field"] == "company"
+    )
+    assert company_quality["populated_count"] == 1
+    assert company_quality["blank_count"] == 1
+    assert "Example Co" not in repr(output)
+    assert "Engineering Manager" not in repr(output)
+    assert str(tracker_path) not in repr(output)
+
+
 def _write_env_file(tmp_path: Path, tracker_path: Path) -> Path:
     env_file = tmp_path / ".env"
     env_file.write_text(

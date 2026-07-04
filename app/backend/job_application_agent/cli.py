@@ -14,6 +14,7 @@ from job_application_agent.integrations.sheets import (
     DEFAULT_TRACKER_HEADER_TABS,
     build_sheets_adapter,
 )
+from job_application_agent.tracker_quality import LocalTrackerQualityAnalyzer
 from job_application_agent.tracker_schema import map_tracker_headers
 
 
@@ -39,6 +40,17 @@ def main(argv: list[str] | None = None) -> int:
         "tracker-schema", help="Map tracker headers to canonical fields"
     )
     _add_header_args(schema_parser)
+
+    quality_parser = subparsers.add_parser(
+        "tracker-quality", help="Print log-safe tracker quality counts"
+    )
+    _add_header_args(quality_parser)
+    quality_parser.add_argument(
+        "--max-records",
+        type=int,
+        default=1000,
+        help="Maximum non-blank records to scan per tab. Defaults to 1000.",
+    )
 
     args = parser.parse_args(argv)
 
@@ -106,6 +118,47 @@ def main(argv: list[str] | None = None) -> int:
                                 ),
                             }
                             for tab in schema.tabs
+                        ],
+                    },
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 0
+
+    if args.command == "tracker-quality":
+        config = RuntimeConfig.from_env(env_file=Path(args.env_file))
+        analyzer = LocalTrackerQualityAnalyzer.from_config(config)
+        summary = analyzer.summarize(
+            args.tabs,
+            header_row=args.header_row,
+            max_records=args.max_records,
+        )
+        print(
+            json.dumps(
+                {
+                    "config": config.safe_summary(),
+                    "tracker_quality": {
+                        "is_schema_complete": summary.is_schema_complete,
+                        "max_records": summary.max_records,
+                        "scanned_records": summary.scanned_records,
+                        "tabs": [
+                            {
+                                "title": tab.title,
+                                "scanned_records": tab.scanned_records,
+                                "blank_records_skipped": tab.blank_records_skipped,
+                                "is_schema_complete": tab.is_schema_complete,
+                                "missing_required_fields": list(
+                                    tab.missing_required_fields
+                                ),
+                                "unmapped_headers": list(tab.unmapped_headers),
+                                "required_fields": [
+                                    field.__dict__ for field in tab.required_fields
+                                ],
+                                "truncated": tab.truncated,
+                            }
+                            for tab in summary.tabs
                         ],
                     },
                 },

@@ -97,11 +97,37 @@ job-agent tracker-schema --env-file .env --tab Applications
 
 Schema mapping still reads headers only. It does not read or print row data.
 
+## Quality summary
+
+Use the quality command to scan local tracker records and print aggregate quality counts:
+
+```bash
+job-agent tracker-quality --env-file .env
+```
+
+The quality summary reports:
+
+- scanned record counts
+- skipped blank record counts
+- blank counts for required canonical fields
+- unmapped headers
+- missing required fields
+- whether the scan was truncated by `--max-records`
+
+To inspect one tab with a smaller bound:
+
+```bash
+job-agent tracker-quality --env-file .env --tab Applications --max-records 100
+```
+
+The command does not print individual company names, roles, notes, URLs, or other cell values.
+
 ## Safety constraints
 
 - No write methods are implemented.
 - No real spreadsheet IDs are committed.
 - No local tracker exports are committed.
 - Header and schema discovery print column-level metadata only, not row data.
+- Quality summaries print aggregate counts only, not individual cell values.
 - Tests use mock/fake/local temporary workbooks only.
 - External submission remains disabled by default.
