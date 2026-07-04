@@ -19,7 +19,11 @@ from job_application_agent.mock_jobs import (
     mock_scored_job_to_dict,
     score_mock_jobs,
 )
-from job_application_agent.review_queue import build_mock_review_queue, review_queue_to_dict
+from job_application_agent.review_queue import (
+    build_mock_review_queue,
+    parse_score_priority,
+    review_queue_to_dict,
+)
 from job_application_agent.tracker_quality import LocalTrackerQualityAnalyzer
 from job_application_agent.tracker_schema import map_tracker_headers
 
@@ -84,6 +88,18 @@ def main(argv: list[str] | None = None) -> int:
         "mock-queue", help="Print a sanitized mock priority queue"
     )
     _add_mock_fixture_arg(mock_queue_parser)
+    mock_queue_parser.add_argument(
+        "--min-score",
+        type=int,
+        default=None,
+        help="Only include mock queue items with this score or higher.",
+    )
+    mock_queue_parser.add_argument(
+        "--priority",
+        action="append",
+        default=None,
+        help="Priority to include. Repeat for multiple values: high, medium, low.",
+    )
 
     args = parser.parse_args(argv)
 
@@ -232,10 +248,21 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "mock-queue":
-        queue = build_mock_review_queue(Path(args.fixture))
+        priorities = tuple(parse_score_priority(value) for value in args.priority or ())
+        queue = build_mock_review_queue(
+            Path(args.fixture),
+            min_score=args.min_score,
+            priorities=priorities,
+        )
         print(
             json.dumps(
-                {"mock_queue": review_queue_to_dict(queue)},
+                {
+                    "mock_queue": review_queue_to_dict(
+                        queue,
+                        min_score=args.min_score,
+                        priorities=priorities,
+                    )
+                },
                 indent=2,
                 sort_keys=True,
             )

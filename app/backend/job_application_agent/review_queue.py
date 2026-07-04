@@ -7,10 +7,10 @@ actions.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import StrEnum
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 from job_application_agent.domain import ScorePriority
 from job_application_agent.mock_jobs import MockScoredJob, score_mock_jobs
@@ -49,10 +49,16 @@ class ReviewQueue:
         return len(self.items)
 
 
-def build_mock_review_queue(fixture_path: Path) -> ReviewQueue:
+def build_mock_review_queue(
+    fixture_path: Path,
+    *,
+    min_score: int | None = None,
+    priorities: Iterable[ScorePriority] | None = None,
+) -> ReviewQueue:
     """Score sanitized mock jobs and return a sorted human review queue."""
 
-    return build_review_queue(score_mock_jobs(fixture_path))
+    queue = build_review_queue(score_mock_jobs(fixture_path))
+    return filter_review_queue(queue, min_score=min_score, priorities=priorities)
 
 
 def build_review_queue(scored_jobs: tuple[MockScoredJob, ...]) -> ReviewQueue:
@@ -75,11 +81,40 @@ def build_review_queue(scored_jobs: tuple[MockScoredJob, ...]) -> ReviewQueue:
     )
 
 
-def review_queue_to_dict(queue: ReviewQueue) -> dict[str, Any]:
+def filter_review_queue(
+    queue: ReviewQueue,
+    *,
+    min_score: int | None = None,
+    priorities: Iterable[ScorePriority] | None = None,
+) -> ReviewQueue:
+    """Filter a review queue and re-rank the remaining items."""
+
+    priority_set = set(priorities or ())
+    items = queue.items
+    if min_score is not None:
+        items = tuple(item for item in items if item.score >= min_score)
+    if priority_set:
+        items = tuple(item for item in items if item.priority in priority_set)
+    return ReviewQueue(
+        items=tuple(replace(item, rank=rank) for rank, item in enumerate(items, start=1))
+    )
+
+
+def review_queue_to_dict(
+    queue: ReviewQueue,
+    *,
+    min_score: int | None = None,
+    priorities: Iterable[ScorePriority] | None = None,
+) -> dict[str, Any]:
     """Convert a review queue to JSON-compatible public-safe output."""
 
+    priority_values = tuple(priority.value for priority in priorities or ())
     return {
         "count": queue.count,
+        "filters": {
+            "min_score": min_score,
+            "priorities": list(priority_values),
+        },
         "items": [
             {
                 "rank": item.rank,
@@ -94,6 +129,17 @@ def review_queue_to_dict(queue: ReviewQueue) -> dict[str, Any]:
             for item in queue.items
         ],
     }
+
+
+def parse_score_priority(value: str) -> ScorePriority:
+    """Parse a CLI priority value."""
+
+    normalized_value = value.strip().lower().replace("-", "_")
+    try:
+        return ScorePriority(normalized_value)
+    except ValueError as exc:
+        allowed = ", ".join(priority.value for priority in ScorePriority)
+        raise ValueError(f"Unsupported priority '{value}'. Allowed values: {allowed}.") from exc
 
 
 def _queue_item(rank: int, scored_job: MockScoredJob) -> ReviewQueueItem:
