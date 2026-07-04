@@ -71,7 +71,10 @@ def render_mock_dashboard_markdown(
             "",
             "## Top Review Queue Items",
             "",
-            "| Rank | Mock job | Company | Title | Score | Priority | Recommendation | Rationale |",
+            (
+                "| Rank | Mock job | Company | Title | Score | Priority | "
+                "Recommendation | Rationale |"
+            ),
             "| ---: | --- | --- | --- | ---: | --- | --- | --- |",
         ]
     )
@@ -81,7 +84,12 @@ def render_mock_dashboard_markdown(
             "",
             "## Safety Boundary",
             "",
-            "This report is generated from sanitized mock fixtures only. It does not read `.env`, private tracker exports, resumes, credentials, contacts, production IDs, or generated application materials.",
+            (
+                "This report is generated from sanitized mock fixtures only. It "
+                "does not read `.env`, private tracker exports, resumes, "
+                "credentials, contacts, production IDs, or generated application "
+                "materials."
+            ),
         ]
     )
     return "\n".join(lines) + "\n"
@@ -93,21 +101,33 @@ def _count_rows(counts: dict[str, int]) -> list[str]:
 
 def _top_item_rows(items: list[dict[str, Any]]) -> list[str]:
     if not items:
-        return ["| — | No mock queue items matched the selected filters. | — | — | — | — | — | — |"]
+        return [
+            (
+                "| — | No mock queue items matched the selected filters. | — | "
+                "— | — | — | — | — |"
+            )
+        ]
 
     return [
-        "| {rank} | {job_id} | {company} | {title} | {score} | {priority} | {recommendation} | {rationale} |".format(
-            rank=item["rank"],
-            job_id=_escape_cell(item["job_id"]),
-            company=_escape_cell(item["company"]),
-            title=_escape_cell(item["title"]),
-            score=item["score"],
-            priority=_escape_cell(item["priority"]),
-            recommendation=_escape_cell(item["recommendation"]),
-            rationale=_escape_cell(item["rationale"]),
-        )
+        _top_item_row(item)
         for item in items
     ]
+
+
+def _top_item_row(item: dict[str, Any]) -> str:
+    return (
+        "| {rank} | {job_id} | {company} | {title} | {score} | {priority} | "
+        "{recommendation} | {rationale} |"
+    ).format(
+        rank=item["rank"],
+        job_id=_escape_cell(item["job_id"]),
+        company=_escape_cell(item["company"]),
+        title=_escape_cell(item["title"]),
+        score=item["score"],
+        priority=_escape_cell(item["priority"]),
+        recommendation=_escape_cell(item["recommendation"]),
+        rationale=_escape_cell(item["rationale"]),
+    )
 
 
 def _format_optional(value: object | None) -> str:
