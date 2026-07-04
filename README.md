@@ -13,6 +13,18 @@ This repository uses mock data and sanitized examples only. It does not contain 
 - Track application status, follow-ups, and outcomes.
 - Demonstrate secure, production-minded architecture.
 
+## Run From Any Computer
+
+Use Git Bash from a fresh machine with Git and Python 3.11 or newer installed:
+
+```bash
+git clone https://github.com/Williamgbarnes/job-application-agent.git
+cd job-application-agent
+bash scripts/check-local.sh
+```
+
+The local check script creates a repo-local `.venv`, installs development dependencies, and runs the public-safe lint, type, security, test, and mock CLI smoke checks. It does not require `.env`, private tracker exports, resumes, credentials, production IDs, or external write access.
+
 ## Current Public Demo
 
 The current public demo path uses sanitized mock fixtures only:
