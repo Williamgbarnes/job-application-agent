@@ -1,19 +1,21 @@
-"""Read-only Google Sheets metadata adapter.
+"""Read-only tracker metadata adapters.
 
-The adapter intentionally starts with spreadsheet metadata and tab discovery only.
-It does not expose write methods and does not hard-code private spreadsheet IDs.
+The adapters intentionally start with spreadsheet metadata and tab discovery only.
+They do not expose write methods and do not hard-code private spreadsheet IDs
+or local private file paths.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Mapping, Protocol
 
 from job_application_agent.config import ConfigurationError, RuntimeConfig
 
 
 class SheetsAdapterError(RuntimeError):
-    """Raised when a Sheets adapter cannot complete a read-only operation."""
+    """Raised when a tracker adapter cannot complete a read-only operation."""
 
 
 @dataclass(frozen=True)
@@ -32,7 +34,8 @@ class SheetTab:
 class SpreadsheetSummary:
     """Public-safe spreadsheet metadata.
 
-    The spreadsheet ID is deliberately excluded so summaries are safe to log.
+    Private IDs and local file paths are deliberately excluded so summaries are
+    safe to log.
     """
 
     title: str
@@ -46,7 +49,7 @@ class SpreadsheetSummary:
 
 
 class SheetsMetadataProvider(Protocol):
-    """Protocol shared by mock and Google-backed adapters."""
+    """Protocol shared by mock, local-file, and Google-backed adapters."""
 
     def get_metadata(self) -> SpreadsheetSummary:
         """Return read-only spreadsheet metadata."""
@@ -75,6 +78,67 @@ class MockSheetsAdapter:
 
     def get_metadata(self) -> SpreadsheetSummary:
         return self._summary
+
+
+class LocalExcelTrackerAdapter:
+    """Read-only adapter for a private local `.xlsx` tracker export."""
+
+    def __init__(self, *, workbook_path: str | Path) -> None:
+        path = Path(workbook_path)
+        if not path:
+            raise ConfigurationError("A workbook path is required.")
+        self._workbook_path = path
+
+    @classmethod
+    def from_config(cls, config: RuntimeConfig) -> "LocalExcelTrackerAdapter":
+        if not config.staging_tracker_path:
+            raise ConfigurationError("STAGING_TRACKER_PATH is required for local tracker reads.")
+        return cls(workbook_path=config.staging_tracker_path)
+
+    def get_metadata(self) -> SpreadsheetSummary:
+        if not self._workbook_path.exists():
+            raise SheetsAdapterError(
+                "Local staging tracker export was not found. Confirm STAGING_TRACKER_PATH."
+            )
+
+        try:
+            from openpyxl import load_workbook
+        except ImportError as exc:  # pragma: no cover - import depends on optional deps
+            raise SheetsAdapterError(
+                "Local Excel support requires openpyxl. Install with: "
+                "pip install -e '.[excel]'"
+            ) from exc
+
+        try:
+            workbook = load_workbook(
+                filename=self._workbook_path, read_only=True, data_only=False
+            )
+        except Exception as exc:  # pragma: no cover - depends on file corruption details
+            raise SheetsAdapterError(
+                "Failed to read local staging tracker export. Confirm it is a valid .xlsx file."
+            ) from exc
+
+        try:
+            tabs = tuple(
+                SheetTab(
+                    title=worksheet.title,
+                    sheet_id=index,
+                    index=index,
+                    row_count=worksheet.max_row,
+                    column_count=worksheet.max_column,
+                    frozen_row_count=_frozen_row_count(worksheet.freeze_panes),
+                )
+                for index, worksheet in enumerate(workbook.worksheets)
+            )
+        finally:
+            workbook.close()
+
+        return SpreadsheetSummary(
+            title=self._workbook_path.stem,
+            locale=None,
+            time_zone=None,
+            tabs=tabs,
+        )
 
 
 class GoogleSheetsAdapter:
@@ -130,6 +194,8 @@ def build_sheets_adapter(config: RuntimeConfig) -> SheetsMetadataProvider:
 
     if config.runtime_mode == "mock":
         return MockSheetsAdapter()
+    if config.runtime_mode == "staging" and config.staging_tracker_path:
+        return LocalExcelTrackerAdapter.from_config(config)
     return GoogleSheetsAdapter.from_config(config)
 
 
@@ -179,6 +245,15 @@ def _build_google_sheets_service() -> Any:
         scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"]
     )
     return build("sheets", "v4", credentials=credentials, cache_discovery=False)
+
+
+def _frozen_row_count(freeze_panes: str | None) -> int | None:
+    if not freeze_panes:
+        return None
+    row_digits = "".join(character for character in freeze_panes if character.isdigit())
+    if not row_digits:
+        return None
+    return max(int(row_digits) - 1, 0)
 
 
 def _optional_int(value: Any) -> int | None:
