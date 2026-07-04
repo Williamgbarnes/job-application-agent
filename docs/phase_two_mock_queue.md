@@ -22,6 +22,18 @@ To use another sanitized fixture:
 job-agent mock-queue --fixture examples/mock_jobs.json
 ```
 
+## Local filters
+
+The command can narrow the displayed mock items by score or priority:
+
+```bash
+job-agent mock-queue --min-score 75
+job-agent mock-queue --priority high
+job-agent mock-queue --priority high --priority medium
+```
+
+Filtered output is re-ranked from `1` so the JSON remains easy to read.
+
 ## Output
 
 The command prints JSON with:
@@ -33,6 +45,7 @@ The command prints JSON with:
 - priority
 - review bucket
 - rationale
+- selected filters
 
 Review buckets are intentionally limited to:
 
@@ -58,4 +71,5 @@ Review buckets are intentionally limited to:
 py -m pytest tests/test_review_queue.py -q
 py -m pytest
 job-agent mock-queue
+job-agent mock-queue --min-score 75 --priority high
 ```
