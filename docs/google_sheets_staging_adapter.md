@@ -74,11 +74,34 @@ To inspect one tab or use a non-default header row:
 job-agent tracker-headers --env-file .env --tab Applications --header-row 1
 ```
 
+## Schema mapping
+
+Use the schema command to map discovered headers to canonical fields used by the app:
+
+```bash
+job-agent tracker-schema --env-file .env
+```
+
+The mapping reports:
+
+- matched canonical fields
+- unmapped headers
+- missing required fields
+- whether each tab is complete enough for normalization
+
+To inspect one tab:
+
+```bash
+job-agent tracker-schema --env-file .env --tab Applications
+```
+
+Schema mapping still reads headers only. It does not read or print row data.
+
 ## Safety constraints
 
 - No write methods are implemented.
 - No real spreadsheet IDs are committed.
 - No local tracker exports are committed.
-- Header discovery prints column names only, not row data.
+- Header and schema discovery print column-level metadata only, not row data.
 - Tests use mock/fake/local temporary workbooks only.
 - External submission remains disabled by default.
