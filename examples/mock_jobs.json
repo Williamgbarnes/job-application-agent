@@ -1,0 +1,56 @@
+[
+  {
+    "id": "job_mock_001",
+    "source": "mock",
+    "company": "Northstar Cloud Systems",
+    "title": "Senior Engineering Manager, Platform Delivery",
+    "location": "Remote, United States",
+    "work_arrangement": "remote",
+    "employment_type": "full-time",
+    "compensation_min": 150000,
+    "compensation_max": 185000,
+    "posted_date": "2026-07-01",
+    "closing_date": "2026-07-22",
+    "posting_url": "https://example.com/jobs/senior-engineering-manager-platform-delivery",
+    "requirements": [
+      "Lead distributed software engineering teams",
+      "Improve CI/CD and release reliability",
+      "Partner with product and business stakeholders",
+      "Use delivery metrics to improve predictability",
+      "Coach engineers and grow technical leaders"
+    ],
+    "responsibilities": [
+      "Own platform delivery roadmap",
+      "Improve engineering execution metrics",
+      "Lead cross-functional planning",
+      "Develop managers and senior engineers"
+    ]
+  },
+  {
+    "id": "job_mock_002",
+    "source": "mock",
+    "company": "Civic Data Labs",
+    "title": "Director of Software Engineering",
+    "location": "Hybrid, Columbia, SC",
+    "work_arrangement": "hybrid",
+    "employment_type": "full-time",
+    "compensation_min": 140000,
+    "compensation_max": 170000,
+    "posted_date": "2026-06-29",
+    "closing_date": "2026-07-20",
+    "posting_url": "https://example.com/jobs/director-software-engineering",
+    "requirements": [
+      "Lead software delivery across multiple teams",
+      "Modernize cloud-native applications",
+      "Establish engineering standards",
+      "Collaborate with executive stakeholders",
+      "Manage hiring, coaching, and performance"
+    ],
+    "responsibilities": [
+      "Set engineering strategy",
+      "Improve delivery processes",
+      "Manage team health and capacity",
+      "Guide architecture decisions"
+    ]
+  }
+]
