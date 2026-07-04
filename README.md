@@ -22,14 +22,16 @@ py -m pip install -e ".[dev]"
 py -m pytest
 job-agent mock-score
 job-agent mock-queue
+job-agent mock-dashboard
 ```
 
-These commands read `examples/mock_jobs.json`, apply deterministic scoring rules, and print a mock review queue. They do not read private tracker exports, `.env`, resumes, credentials, or production systems.
+These commands read `examples/mock_jobs.json`, apply deterministic scoring rules, and print mock review queue and dashboard output. They do not read private tracker exports, `.env`, resumes, credentials, or production systems.
 
 Useful docs:
 
 - `docs/scoring.md`
 - `docs/phase_two_mock_queue.md`
+- `docs/phase_two_mock_dashboard.md`
 - `docs/security_model.md`
 - `docs/real_data_boundary.md`
 - `docs/human_in_the_loop_policy.md`
