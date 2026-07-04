@@ -3,7 +3,7 @@ from pathlib import Path
 
 from openpyxl import Workbook
 
-from job_application_agent.cli import main
+from job_application_agent.cli import QUALITY_GATE_FAILURE_EXIT_CODE, main
 
 
 def test_tracker_headers_cli_prints_log_safe_headers(
@@ -109,8 +109,11 @@ def test_tracker_quality_cli_prints_log_safe_counts(
     output = json.loads(capsys.readouterr().out)
     tab = output["tracker_quality"]["tabs"][0]
     assert output["tracker_quality"]["scanned_records"] == 2
+    assert output["tracker_quality"]["has_required_blanks"] is True
+    assert output["tracker_quality"]["failed_quality_gates"] == []
     assert tab["title"] == "Applications"
     assert tab["scanned_records"] == 2
+    assert tab["has_required_blanks"] is True
     company_quality = next(
         field for field in tab["required_fields"] if field["canonical_field"] == "company"
     )
@@ -118,6 +121,71 @@ def test_tracker_quality_cli_prints_log_safe_counts(
     assert company_quality["blank_count"] == 1
     assert "Example Co" not in repr(output)
     assert "Engineering Manager" not in repr(output)
+    assert str(tracker_path) not in repr(output)
+
+
+def test_tracker_quality_cli_fails_selected_gate_without_values(
+    tmp_path: Path, capsys
+) -> None:
+    tracker_path = tmp_path / "staging_job_tracker.xlsx"
+    workbook = Workbook()
+    workbook.active.title = "Dashboard"
+    applications = workbook.create_sheet("Applications")
+    applications.append(["Company", "Role", "Status"])
+    applications.append([None, "Engineering Manager", "Applied"])
+    workbook.save(tracker_path)
+
+    env_file = _write_env_file(tmp_path, tracker_path)
+
+    exit_code = main(
+        [
+            "tracker-quality",
+            "--env-file",
+            str(env_file),
+            "--tab",
+            "Applications",
+            "--fail-on-required-blanks",
+        ]
+    )
+
+    assert exit_code == QUALITY_GATE_FAILURE_EXIT_CODE
+    output = json.loads(capsys.readouterr().out)
+    assert output["tracker_quality"]["failed_quality_gates"] == ["required_blanks"]
+    assert "Engineering Manager" not in repr(output)
+    assert str(tracker_path) not in repr(output)
+
+
+def test_tracker_quality_cli_strict_fails_all_selected_gates(
+    tmp_path: Path, capsys
+) -> None:
+    tracker_path = tmp_path / "staging_job_tracker.xlsx"
+    workbook = Workbook()
+    workbook.active.title = "Dashboard"
+    applications = workbook.create_sheet("Applications")
+    applications.append(["Company"])
+    applications.append(["Example Co"])
+    workbook.save(tracker_path)
+
+    env_file = _write_env_file(tmp_path, tracker_path)
+
+    exit_code = main(
+        [
+            "tracker-quality",
+            "--env-file",
+            str(env_file),
+            "--tab",
+            "Applications",
+            "--strict",
+        ]
+    )
+
+    assert exit_code == QUALITY_GATE_FAILURE_EXIT_CODE
+    output = json.loads(capsys.readouterr().out)
+    assert output["tracker_quality"]["failed_quality_gates"] == [
+        "incomplete_schema",
+        "required_blanks",
+    ]
+    assert "Example Co" not in repr(output)
     assert str(tracker_path) not in repr(output)
 
 

@@ -17,6 +17,8 @@ from job_application_agent.integrations.sheets import (
 from job_application_agent.tracker_quality import LocalTrackerQualityAnalyzer
 from job_application_agent.tracker_schema import map_tracker_headers
 
+QUALITY_GATE_FAILURE_EXIT_CODE = 2
+
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Job Application Agent utilities")
@@ -50,6 +52,21 @@ def main(argv: list[str] | None = None) -> int:
         type=int,
         default=1000,
         help="Maximum non-blank records to scan per tab. Defaults to 1000.",
+    )
+    quality_parser.add_argument(
+        "--fail-on-incomplete-schema",
+        action="store_true",
+        help="Return a non-zero exit code if required canonical columns are missing.",
+    )
+    quality_parser.add_argument(
+        "--fail-on-required-blanks",
+        action="store_true",
+        help="Return a non-zero exit code if required canonical fields have blanks.",
+    )
+    quality_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Enable all tracker quality gates.",
     )
 
     args = parser.parse_args(argv)
@@ -135,12 +152,20 @@ def main(argv: list[str] | None = None) -> int:
             header_row=args.header_row,
             max_records=args.max_records,
         )
+        fail_on_incomplete_schema = args.strict or args.fail_on_incomplete_schema
+        fail_on_required_blanks = args.strict or args.fail_on_required_blanks
+        failed_quality_gates = summary.failed_quality_gates(
+            fail_on_incomplete_schema=fail_on_incomplete_schema,
+            fail_on_required_blanks=fail_on_required_blanks,
+        )
         print(
             json.dumps(
                 {
                     "config": config.safe_summary(),
                     "tracker_quality": {
                         "is_schema_complete": summary.is_schema_complete,
+                        "has_required_blanks": summary.has_required_blanks,
+                        "failed_quality_gates": list(failed_quality_gates),
                         "max_records": summary.max_records,
                         "scanned_records": summary.scanned_records,
                         "tabs": [
@@ -149,6 +174,7 @@ def main(argv: list[str] | None = None) -> int:
                                 "scanned_records": tab.scanned_records,
                                 "blank_records_skipped": tab.blank_records_skipped,
                                 "is_schema_complete": tab.is_schema_complete,
+                                "has_required_blanks": tab.has_required_blanks,
                                 "missing_required_fields": list(
                                     tab.missing_required_fields
                                 ),
@@ -166,6 +192,8 @@ def main(argv: list[str] | None = None) -> int:
                 sort_keys=True,
             )
         )
+        if failed_quality_gates:
+            return QUALITY_GATE_FAILURE_EXIT_CODE
         return 0
 
     return 1
