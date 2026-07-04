@@ -1,18 +1,20 @@
-# GitHub Actions PR reviewer: runs linters/tests and posts a PR comment
+# GitHub Actions PR reviewer: reports lint/type findings inline and runs safety checks.
 # Works on GitHub Free; does not use Copilot cloud.
 name: PR Review
+
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
-  issues: write
-  pull-requests: write
   contents: read
+  pull-requests: write
 
 jobs:
   pr-review:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -27,71 +29,33 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements-dev.txt
 
-      - name: Run flake8
-        run: |
-          mkdir -p pr_check_results
-          python -m flake8 . 2>&1 | tee pr_check_results/flake8.txt
+      - name: Set up reviewdog
+        uses: reviewdog/action-setup@v1
 
-      - name: Run mypy
+      - name: Run flake8 with reviewdog
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ github.token }}
         run: |
-          python -m mypy . 2>&1 | tee pr_check_results/mypy.txt
+          python -m flake8 . 2>&1 | reviewdog \
+            -efm="%f:%l:%c: %m" \
+            -name="flake8" \
+            -reporter="github-pr-review" \
+            -filter-mode="diff_context" \
+            -fail-level="error"
+
+      - name: Run mypy with reviewdog
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ github.token }}
+        run: |
+          python -m mypy . 2>&1 | reviewdog \
+            -efm="%f:%l: %m" \
+            -name="mypy" \
+            -reporter="github-pr-review" \
+            -filter-mode="diff_context" \
+            -fail-level="error"
 
       - name: Run bandit
-        run: |
-          python -m bandit -r . -q 2>&1 | tee pr_check_results/bandit.txt
+        run: python -m bandit -r app/backend/job_application_agent -q
 
       - name: Run pytest
-        run: |
-          python -m pytest -q 2>&1 | tee pr_check_results/pytest.txt
-
-      - name: Post PR summary comment
-        if: always()
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const fs = require('fs');
-            const path = './pr_check_results';
-            const parts = [];
-            const maxLen = 12000;
-            const files = [
-              {file:'flake8.txt', title:'flake8 (style/lint)'},
-              {file:'mypy.txt', title:'mypy (type checks)'},
-              {file:'bandit.txt', title:'bandit (security scan)'},
-              {file:'pytest.txt', title:'pytest (tests)'}
-            ];
-            for (const f of files) {
-              try {
-                const txt = fs.readFileSync(`${path}/${f.file}`, 'utf8').trim();
-                const content = txt.length ? txt : '(no output)';
-                parts.push(`### ${f.title}\n\n\`\`\`\n${content.slice(0,maxLen)}\n\`\`\``);
-              } catch (e) {
-                parts.push(`### ${f.title}\n\n\`\`\`\n(not run)\n\`\`\``);
-              }
-            }
-            const body = [
-              '<!-- pr-reviewer -->',
-              '**Automated PR review — checks run:**',
-              '',
-              parts.join('\n\n'),
-              '',
-              '_If you want the full raw logs, run the checks locally or request more detail._'
-            ].join('\n\n');
-            const issue_number = context.issue.number;
-            const { data: comments } = await github.rest.issues.listComments({
-              ...context.repo,
-              issue_number
-            });
-            const existing = comments.find(c => c.body && c.body.includes('<!-- pr-reviewer -->') && c.user && c.user.type === 'Bot');
-            if (existing) {
-              await github.rest.issues.updateComment({
-                ...context.repo,
-                comment_id: existing.id,
-                body
-              });
-            } else {
-              await github.rest.issues.createComment({
-                ...context.repo,
-                issue_number,
-                body
-              });
-            }
+        run: python -m pytest -q
