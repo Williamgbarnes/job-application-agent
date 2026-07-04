@@ -13,6 +13,7 @@
 - Posting snapshot schema.
 - Score report schema.
 - Unit-tested scoring rules.
+- Scoring rationale output.
 
 ## Phase 2: Mock dashboard
 
