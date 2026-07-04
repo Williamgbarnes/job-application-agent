@@ -25,6 +25,35 @@ Codex must not:
 - send email, messages, applications, form submissions, or external write requests;
 - add production integrations without explicit configuration gates and human approval.
 
+## GitHub Free plan constraints
+
+Design repository automation and implementation choices to work on GitHub Free without paid infrastructure assumptions.
+
+Allowed assumptions:
+
+- Unlimited public and private repositories.
+- Unlimited collaborators.
+- Community support only.
+
+Budgeted limits to protect:
+
+- GitHub Actions: 2,000 minutes per month.
+- GitHub Packages: 500 MB storage.
+- Codespaces compute: 120 core-hours per developer.
+- Codespaces storage: 15 GB per developer.
+
+Implementation rules:
+
+- Keep CI small, deterministic, and mock-only; prefer one Linux test job over large matrices.
+- Do not add scheduled, polling, long-running, or deployment workflows unless explicitly approved.
+- Give every workflow job a practical timeout and cancel superseded runs with concurrency controls.
+- Do not require paid runners, larger runners, GPU runners, self-hosted runners, or Team/Enterprise-only controls.
+- Do not make GitHub Packages, container registries, release artifacts, or large workflow artifacts part of the default path.
+- Avoid committed generated assets, dependency caches, model files, browser binaries, private exports, or bulky test fixtures that pressure repository, package, artifact, or Codespaces storage.
+- Keep Codespaces optional; local Git Bash development must remain the primary documented path.
+- Prefer local commands, small fixtures, and unit tests over cloud services for public validation.
+- Any workflow that could consume meaningful monthly minutes, package storage, or Codespaces compute needs an explicit note in the PR explaining why it fits the Free plan.
+
 ## Standard local commands
 
 Use Git Bash commands by default.
