@@ -1,0 +1,45 @@
+# Example runtime configuration.
+# Copy this file outside the repository or use it as a reference for local/private config.
+# Do not commit real IDs, credentials, paths, or private data.
+
+app:
+  runtime_mode: mock # mock | staging | production
+  dry_run: true
+  require_human_approval: true
+  allow_external_submission: false
+
+storage:
+  database_url_env: DATABASE_URL
+  private_data_dir: data/private
+  generated_output_dir: generated
+
+integrations:
+  openai:
+    api_key_env: OPENAI_API_KEY
+
+  google_sheets:
+    staging_sheet_id_env: GOOGLE_SHEETS_STAGING_ID
+    production_sheet_id_env: GOOGLE_SHEETS_PRODUCTION_ID
+    read_only_by_default: true
+
+  google_drive:
+    staging_folder_id_env: GOOGLE_DRIVE_STAGING_FOLDER_ID
+    production_folder_id_env: GOOGLE_DRIVE_PRODUCTION_FOLDER_ID
+    generated_materials_folder_env: GOOGLE_DRIVE_GENERATED_MATERIALS_FOLDER_ID
+
+workflow:
+  job_discovery:
+    enabled: true
+    default_mode: mock
+
+  scoring:
+    enabled: true
+    explain_every_score: true
+
+  materials_generation:
+    enabled: false
+    require_approved_source_documents: true
+
+  application_submission:
+    enabled: false
+    require_explicit_user_approval: true
