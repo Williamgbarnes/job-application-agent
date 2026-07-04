@@ -14,6 +14,7 @@ from job_application_agent.integrations.sheets import (
     DEFAULT_TRACKER_HEADER_TABS,
     build_sheets_adapter,
 )
+from job_application_agent.tracker_schema import map_tracker_headers
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -32,26 +33,12 @@ def main(argv: list[str] | None = None) -> int:
     headers_parser = subparsers.add_parser(
         "tracker-headers", help="Print log-safe tracker header metadata"
     )
-    headers_parser.add_argument(
-        "--env-file",
-        default=".env",
-        help="Path to local env file. Defaults to .env in the current directory.",
+    _add_header_args(headers_parser)
+
+    schema_parser = subparsers.add_parser(
+        "tracker-schema", help="Map tracker headers to canonical fields"
     )
-    headers_parser.add_argument(
-        "--tab",
-        action="append",
-        dest="tabs",
-        help=(
-            "Tracker tab to inspect. Repeat for multiple tabs. Defaults to "
-            f"{', '.join(DEFAULT_TRACKER_HEADER_TABS)}."
-        ),
-    )
-    headers_parser.add_argument(
-        "--header-row",
-        type=int,
-        default=1,
-        help="1-based row number containing headers. Defaults to 1.",
-    )
+    _add_header_args(schema_parser)
 
     args = parser.parse_args(argv)
 
@@ -94,7 +81,64 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
 
+    if args.command == "tracker-schema":
+        config = RuntimeConfig.from_env(env_file=Path(args.env_file))
+        adapter = build_sheets_adapter(config)
+        headers = adapter.get_headers(args.tabs, header_row=args.header_row)
+        schema = map_tracker_headers(headers)
+        print(
+            json.dumps(
+                {
+                    "config": config.safe_summary(),
+                    "tracker_schema": {
+                        "is_complete": schema.is_complete,
+                        "tabs": [
+                            {
+                                "title": tab.title,
+                                "header_row": tab.header_row,
+                                "is_complete": tab.is_complete,
+                                "mapped_fields": [
+                                    field.__dict__ for field in tab.mapped_fields
+                                ],
+                                "unmapped_headers": list(tab.unmapped_headers),
+                                "missing_required_fields": list(
+                                    tab.missing_required_fields
+                                ),
+                            }
+                            for tab in schema.tabs
+                        ],
+                    },
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 0
+
     return 1
+
+
+def _add_header_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--env-file",
+        default=".env",
+        help="Path to local env file. Defaults to .env in the current directory.",
+    )
+    parser.add_argument(
+        "--tab",
+        action="append",
+        dest="tabs",
+        help=(
+            "Tracker tab to inspect. Repeat for multiple tabs. Defaults to "
+            f"{', '.join(DEFAULT_TRACKER_HEADER_TABS)}."
+        ),
+    )
+    parser.add_argument(
+        "--header-row",
+        type=int,
+        default=1,
+        help="1-based row number containing headers. Defaults to 1.",
+    )
 
 
 if __name__ == "__main__":  # pragma: no cover
