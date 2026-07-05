@@ -54,6 +54,8 @@ These commands read `examples/mock_jobs.json`, apply deterministic scoring rules
 
 Useful docs:
 
+- `docs/mock_cli_quickstart.md`
+- `docs/mock_demo_review_checklist.md`
 - `docs/scoring.md`
 - `docs/phase_two_mock_queue.md`
 - `docs/phase_two_mock_dashboard.md`
