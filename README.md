@@ -34,7 +34,7 @@ bash scripts/sync-local.sh
 bash scripts/check-local.sh
 ```
 
-The sync script fetches and fast-forwards `main` by default. It exits before syncing if the working tree has uncommitted changes. See `docs/local_sync_workflow.md` for the full synced handoff model.
+The sync script fetches and fast-forwards `main` by default. It exits before syncing if the working tree has uncommitted changes. New work should use `phase-<phase-number>-<implementation-slug>` branch names. See `docs/local_sync_workflow.md` for the full synced handoff model and branch naming convention.
 
 ## Current Public Demo
 
