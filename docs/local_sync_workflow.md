@@ -29,6 +29,31 @@ The sync script defaults to `main`. To sync another public branch:
 bash scripts/sync-local.sh branch-name
 ```
 
+## Branch naming convention
+
+Use branch names that tie the work to the project phase and implementation area:
+
+```text
+phase-<phase-number>-<implementation-slug>
+```
+
+Examples:
+
+- `phase-2-branch-naming-convention`
+- `phase-2-mock-dashboard-report`
+- `phase-2-tracker-schema-check`
+- `phase-3-package-review-flow`
+
+Rules:
+
+- Use lowercase letters, numbers, and hyphens only.
+- Start with `phase-` followed by the numeric project phase.
+- End with a concise implementation slug that names the feature, doc, test, chore, or workflow being changed.
+- Do not use spaces, slashes, underscores, uppercase letters, issue titles, private company names, private job titles, tracker IDs, URLs, or other private data.
+- Keep the name public-safe and specific enough for PR review.
+
+For repo maintenance that is not tied to a user-facing feature, choose the nearest active phase and use an implementation slug such as `docs`, `ci`, `sync`, `security`, or `workflow`.
+
 ## Safety rules
 
 Before syncing, the script checks for uncommitted local changes and exits if the working tree is dirty. This prevents accidental overwrites of local work.
