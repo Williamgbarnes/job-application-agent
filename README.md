@@ -23,7 +23,64 @@ cd job-application-agent
 bash scripts/check-local.sh
 ```
 
-The local check script creates a repo-local `.venv`, installs development dependencies, and runs the public-safe lint, type, security, test, and mock CLI smoke checks. It does not require `.env`, private tracker exports, resumes, credentials, production IDs, or external write access.
+The local check script creates a repo-local `.venv`, installs development dependencies from `requirements-dev.txt`, and runs the public-safe lint, type, security, test, and mock CLI smoke checks. It does not require `.env`, private tracker exports, resumes, credentials, production IDs, or external write access.
+
+## Run Tests Locally
+
+Use the full public-safe check before opening a pull request:
+
+```bash
+bash scripts/check-local.sh
+```
+
+The script runs these gates in order:
+
+```bash
+python -m flake8 app/backend tests
+python -m mypy app/backend tests
+python -m bandit -r app/backend/job_application_agent -q
+python -m pytest -q
+```
+
+It also smoke-checks the public mock CLI commands without printing their output:
+
+```bash
+python -m job_application_agent.cli mock-score
+python -m job_application_agent.cli mock-queue
+python -m job_application_agent.cli mock-dashboard
+python -m job_application_agent.cli mock-dashboard-report
+python -m job_application_agent.cli mock-package-plan
+```
+
+For focused test iteration after the script has created `.venv`, activate the environment and run the needed tests directly:
+
+```bash
+if [ -f .venv/Scripts/activate ]; then
+  source .venv/Scripts/activate
+else
+  source .venv/bin/activate
+fi
+
+python -m pytest -q
+python -m pytest tests/test_cli.py -q
+python -m pytest tests/test_mock_package_plan.py -q
+```
+
+To recreate the local test environment manually:
+
+```bash
+python -m venv .venv
+if [ -f .venv/Scripts/activate ]; then
+  source .venv/Scripts/activate
+else
+  source .venv/bin/activate
+fi
+python -m pip install --upgrade pip
+python -m pip install -r requirements-dev.txt
+python -m pytest -q
+```
+
+These local test commands use sanitized fixtures only. They should not require `.env`, private tracker exports, resume files, credentials, production IDs, or external write access.
 
 ## Sync an Existing Checkout
 
