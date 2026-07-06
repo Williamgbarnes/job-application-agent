@@ -30,6 +30,7 @@ from job_application_agent.mock_package_plan import (
     build_mock_package_plan,
     mock_package_plan_to_dict,
 )
+from job_application_agent.phase_two_summary import build_phase_two_summary
 from job_application_agent.review_queue import (
     build_mock_review_queue,
     parse_score_priority,
@@ -123,6 +124,14 @@ def main(argv: list[str] | None = None) -> int:
     _add_mock_fixture_arg(mock_package_plan_parser)
     _add_mock_queue_filter_args(mock_package_plan_parser)
     _add_mock_package_plan_top_limit_arg(mock_package_plan_parser)
+
+    mock_phase_two_parser = subparsers.add_parser(
+        "mock-phase-two-summary",
+        help="Print a sanitized Phase 2 completion summary",
+    )
+    _add_mock_fixture_arg(mock_phase_two_parser)
+    _add_mock_queue_filter_args(mock_phase_two_parser)
+    _add_mock_dashboard_top_limit_arg(mock_phase_two_parser)
 
     args = parser.parse_args(argv)
 
@@ -348,6 +357,24 @@ def main(argv: list[str] | None = None) -> int:
                         plan,
                         min_score=args.min_score,
                         priorities=priorities,
+                    )
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 0
+
+    if args.command == "mock-phase-two-summary":
+        priorities = tuple(parse_score_priority(value) for value in args.priority or ())
+        print(
+            json.dumps(
+                {
+                    "mock_phase_two_summary": build_phase_two_summary(
+                        Path(args.fixture),
+                        min_score=args.min_score,
+                        priorities=priorities,
+                        top_limit=args.top_limit,
                     )
                 },
                 indent=2,
