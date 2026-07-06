@@ -196,7 +196,12 @@ def _tracker_status(
         return "not_ready"
     if quality is None:
         return "not_ready"
-    if failed_quality_gates or not quality.is_schema_complete or quality.has_required_blanks:
+    if (
+        failed_quality_gates
+        or not quality.is_schema_complete
+        or quality.has_required_blanks
+        or quality.has_format_warnings
+    ):
         return "needs_attention"
     return "ready"
 
@@ -205,6 +210,7 @@ def _quality_to_dict(summary: TrackerQualitySummary) -> dict[str, Any]:
     return {
         "is_schema_complete": summary.is_schema_complete,
         "has_required_blanks": summary.has_required_blanks,
+        "has_format_warnings": summary.has_format_warnings,
         "max_records": summary.max_records,
         "scanned_records": summary.scanned_records,
         "tabs": [_tab_quality_to_dict(tab) for tab in summary.tabs],
@@ -218,6 +224,7 @@ def _tab_quality_to_dict(tab: TabQualitySummary) -> dict[str, Any]:
         "blank_records_skipped": tab.blank_records_skipped,
         "is_schema_complete": tab.is_schema_complete,
         "has_required_blanks": tab.has_required_blanks,
+        "has_format_warnings": tab.has_format_warnings,
         "missing_required_fields": list(tab.missing_required_fields),
         "unmapped_header_count": len(tab.unmapped_headers),
         "required_fields": [
@@ -227,6 +234,16 @@ def _tab_quality_to_dict(tab: TabQualitySummary) -> dict[str, Any]:
                 "blank_count": field.blank_count,
             }
             for field in tab.required_fields
+        ],
+        "format_fields": [
+            {
+                "canonical_field": field.canonical_field,
+                "value_kind": field.value_kind,
+                "checked_count": field.checked_count,
+                "blank_count": field.blank_count,
+                "invalid_count": field.invalid_count,
+            }
+            for field in tab.format_fields
         ],
         "truncated": tab.truncated,
     }
@@ -251,7 +268,7 @@ def _next_steps(tracker_summary: dict[str, Any]) -> list[str]:
     if tracker_summary["error_codes"]:
         return ["Confirm the private local tracker export exists and is readable."]
     if tracker_summary["status"] == "needs_attention":
-        return ["Review aggregate schema and required-field quality counts locally."]
+        return ["Review aggregate schema, required-field, and format quality counts locally."]
     return ["Continue with read-only staging workflow review."]
 
 
