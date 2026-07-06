@@ -103,7 +103,7 @@ def build_phase_two_summary(
             "top_limit": top_limit,
         },
         "mock_inputs": {
-            "default_fixture": str(DEFAULT_MOCK_JOBS_PATH),
+            "default_fixture": DEFAULT_MOCK_JOBS_PATH.as_posix(),
             "fixture_type": "sanitized_mock_jobs_json",
             "requires_env_file": False,
             "requires_private_tracker_export": False,
