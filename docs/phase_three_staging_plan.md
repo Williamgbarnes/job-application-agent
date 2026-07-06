@@ -23,7 +23,7 @@ Phase 3 foundation work is acceptable when it can:
 - summarize aggregate format warnings for mapped fields without printing values;
 - return deterministic quality gate status;
 - surface sanitized scheduled-task rule alignment;
-- surface sanitized workflow-specific rule alignment;
+- surface sanitized configurable template alignment;
 - avoid Google API usage;
 - avoid external writes, submissions, emails, messaging, or contact actions;
 - keep human approval required before any external action.
@@ -62,7 +62,7 @@ Format checks are intentionally aggregate-only. Invalid dates, URLs, emails, sco
 
 ## Output boundary
 
-The Phase 3 status commands may print aggregate information such as configuration booleans, selected tab names, discovered tab names, scanned record counts, blank record counts, required canonical field names, populated counts, blank counts, mapped field names, format categories, invalid format counts, schema completeness booleans, quality gate names, scheduled-task rule booleans, workflow rule booleans, safe error codes, and safety flags.
+The Phase 3 status commands may print aggregate information such as configuration booleans, selected tab names, discovered tab names, scanned record counts, blank record counts, required canonical field names, populated counts, blank counts, mapped field names, format categories, invalid format counts, schema completeness booleans, quality gate names, scheduled-task rule booleans, workflow template booleans, safe error codes, and safety flags.
 
 The commands must not print private configuration contents, local file paths, workbook titles derived from private filenames, company names, role titles, URLs, contact details, notes, row values, tracker identifiers, spreadsheet identifiers, credentials, scheduled-task names, scheduled-task prompts, resumes, or generated application materials.
 
@@ -78,20 +78,22 @@ The final app must preserve the same operating rules as the existing scheduled-t
 
 See `docs/scheduled_task_rules.md` for the full public-safe contract.
 
-## Workflow-specific rules
+## Configurable workflow templates
 
-The daily job scan, archive job, and application prep workflows each have a public-safe contract that defines allowed inputs, allowed outputs, required controls, approval gates, prohibited actions, and no-op behavior.
+The public repository should define reusable workflow template fields, not a specific person's operating rules.
 
-- Daily job scan may recommend deduplicated and scored leads, but cannot write real tracker rows or submit applications before approval.
-- Archive job may recommend stale, duplicate, closed, or inactive leads for archive, but cannot mutate production tracker records before approval.
-- Application prep may prepare draft package plans and review checklists, but cannot upload, send, contact, submit, or write production updates before approval.
+A downstream private app can configure concrete values for:
 
-See these docs for the workflow-specific contracts:
+- sources and source priority;
+- matching thresholds;
+- deduplication strategy;
+- cleanup criteria;
+- review destinations;
+- preparation artifact types;
+- notification behavior;
+- approval checklist format.
 
-- `docs/workflow_rule_contracts.md`
-- `docs/daily_job_scan_rules.md`
-- `docs/archive_job_rules.md`
-- `docs/application_prep_rules.md`
+The public template contract should remain generic, mock-first, read-only-first, and human-gated. Concrete rules belong in a private deployment.
 
 ## Read-only-first policy
 
