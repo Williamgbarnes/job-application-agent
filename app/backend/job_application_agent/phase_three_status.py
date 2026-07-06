@@ -15,6 +15,7 @@ from job_application_agent.integrations.sheets import (
     LocalExcelTrackerAdapter,
     SheetsAdapterError,
 )
+from job_application_agent.scheduled_task_rules import build_scheduled_task_rules_status
 from job_application_agent.tracker_quality import (
     LocalTrackerQualityAnalyzer,
     TabQualitySummary,
@@ -118,6 +119,12 @@ def build_phase_three_status(
 
     source = tracker_summary["source"]
     quality = tracker_summary["quality"]
+    scheduled_task_rules = build_scheduled_task_rules_status(
+        runtime_mode=config.runtime_mode,
+        dry_run=config.dry_run,
+        require_human_approval=config.require_human_approval,
+        allow_external_submission=config.allow_external_submission,
+    )
     acceptance_criteria = {
         "local_excel_tracker_configured": source["configured"],
         "local_excel_tracker_readable": source["readable"],
@@ -128,6 +135,14 @@ def build_phase_three_status(
         "external_writes_disabled": not config.allow_external_submission,
         "requires_human_approval": config.require_human_approval,
         "log_safe_output": True,
+        "scheduled_task_rules_loaded": True,
+        "scheduled_task_rules_aligned": scheduled_task_rules["is_aligned"],
+        "private_scheduled_workflows_source_of_truth": scheduled_task_rules[
+            "current_private_workflows_remain_source_of_truth"
+        ],
+        "scheduled_task_external_actions_disabled": scheduled_task_rules[
+            "external_writes_disabled_by_default"
+        ],
     }
     phase_status = "ready" if all(acceptance_criteria.values()) else "not_ready"
     if phase_status == "ready" and tracker_summary["status"] != "ready":
@@ -137,6 +152,7 @@ def build_phase_three_status(
         "phase": "phase_3",
         "status": phase_status,
         "acceptance_criteria": acceptance_criteria,
+        "scheduled_task_rules": scheduled_task_rules,
         "tracker_summary": tracker_summary,
         "next_steps": _next_steps(tracker_summary),
         "safety": {
@@ -152,6 +168,12 @@ def build_phase_three_status(
             "submits_applications": False,
             "contacts_people": False,
             "requires_human_approval_before_external_action": True,
+            "scheduled_tasks_use_private_payloads": False,
+            "scheduled_tasks_mutate_external_systems": False,
+            "condition_watches_emit_noop_notifications": False,
+            "minimum_scheduled_poll_interval_minutes": scheduled_task_rules[
+                "minimum_poll_interval_minutes"
+            ],
         },
     }
 

@@ -95,6 +95,23 @@ def test_phase_three_status_reports_missing_local_tracker_without_private_data()
     assert status["acceptance_criteria"]["local_excel_tracker_configured"] is False
     assert status["acceptance_criteria"]["local_excel_tracker_readable"] is False
     assert status["acceptance_criteria"]["read_only_first"] is True
+    assert status["acceptance_criteria"]["scheduled_task_rules_loaded"] is True
+    assert status["acceptance_criteria"]["scheduled_task_rules_aligned"] is True
+    assert (
+        status["acceptance_criteria"]["private_scheduled_workflows_source_of_truth"]
+        is True
+    )
+    assert (
+        status["acceptance_criteria"]["scheduled_task_external_actions_disabled"]
+        is True
+    )
+    assert status["scheduled_task_rules"]["is_aligned"] is True
+    assert (
+        status["scheduled_task_rules"][
+            "current_private_workflows_remain_source_of_truth"
+        ]
+        is True
+    )
     assert status["tracker_summary"]["error_codes"] == [
         "missing_staging_tracker_path"
     ]
@@ -111,6 +128,10 @@ def test_phase_three_status_reports_missing_local_tracker_without_private_data()
         "submits_applications": False,
         "contacts_people": False,
         "requires_human_approval_before_external_action": True,
+        "scheduled_tasks_use_private_payloads": False,
+        "scheduled_tasks_mutate_external_systems": False,
+        "condition_watches_emit_noop_notifications": False,
+        "minimum_scheduled_poll_interval_minutes": 60,
     }
 
 
@@ -142,6 +163,7 @@ def test_phase_three_status_cli_prints_ready_sanitized_output(
     assert status["tracker_summary"]["status"] == "ready"
     assert status["tracker_summary"]["quality"]["scanned_records"] == 1
     assert status["tracker_summary"]["source"]["path_disclosed"] is False
+    assert status["scheduled_task_rules"]["is_aligned"] is True
     assert "Example Co" not in repr(output)
     assert "Engineering Manager" not in repr(output)
     assert str(tracker_path) not in repr(output)
