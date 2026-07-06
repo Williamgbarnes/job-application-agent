@@ -9,6 +9,7 @@ This index groups the Phase 2 public demo documents by reviewer task.
 - `docs/mock_cli_review_order.md`
 - `docs/mock_cli_filter_examples.md`
 - `docs/mock_cli_expected_outputs.md`
+- `docs/phase_two_completion.md`
 
 ## Understand the mock workflow
 
