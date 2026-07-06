@@ -9,6 +9,7 @@ This map connects each public mock command to the demo capability it shows.
 | `job-agent mock-dashboard` | Summary metrics for review planning. |
 | `job-agent mock-dashboard-report` | Markdown report rendering for a human reviewer. |
 | `job-agent mock-package-plan` | Checklist planning placeholders for selected mock records. |
+| `job-agent mock-phase-two-summary` | End-to-end Phase 2 status, nested outputs, and safety boundaries. |
 
 ## Suggested review order
 
@@ -17,6 +18,7 @@ This map connects each public mock command to the demo capability it shows.
 3. Run `job-agent mock-dashboard` to inspect aggregate counts.
 4. Run `job-agent mock-dashboard-report` to inspect Markdown output.
 5. Run `job-agent mock-package-plan` to inspect checklist placeholders.
+6. Run `job-agent mock-phase-two-summary` to confirm Phase 2 completion criteria.
 
 ## Notes
 
