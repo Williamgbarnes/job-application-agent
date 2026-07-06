@@ -26,12 +26,30 @@ if [ "${#PYTHON_CMD[@]}" -eq 0 ]; then
 fi
 
 VENV_DIR="${VENV_DIR:-.venv}"
-"${PYTHON_CMD[@]}" -m venv "$VENV_DIR"
 
 if [ -x "$VENV_DIR/Scripts/python.exe" ]; then
   VENV_PYTHON="$VENV_DIR/Scripts/python.exe"
-else
+elif [ -x "$VENV_DIR/bin/python" ]; then
   VENV_PYTHON="$VENV_DIR/bin/python"
+else
+  "${PYTHON_CMD[@]}" -m venv "$VENV_DIR"
+  if [ -x "$VENV_DIR/Scripts/python.exe" ]; then
+    VENV_PYTHON="$VENV_DIR/Scripts/python.exe"
+  else
+    VENV_PYTHON="$VENV_DIR/bin/python"
+  fi
+fi
+
+if ! "$VENV_PYTHON" - <<'PY' >/dev/null 2>&1
+import sys
+
+if sys.version_info < (3, 11):
+    raise SystemExit(1)
+PY
+then
+  echo "The virtual environment at $VENV_DIR is not usable with Python 3.11+." >&2
+  echo "Deactivate any active environment, remove $VENV_DIR, then rerun this script." >&2
+  exit 1
 fi
 
 "$VENV_PYTHON" -m pip install --upgrade pip
