@@ -23,7 +23,7 @@ cd job-application-agent
 bash scripts/check-local.sh
 ```
 
-The local check script creates a repo-local `.venv`, installs development dependencies from `requirements-dev.txt`, and runs the public-safe lint, type, security, test, and mock CLI smoke checks. It does not require `.env`, private tracker exports, resumes, credentials, production IDs, or external write access.
+The local check script creates a repo-local `.venv`, installs development dependencies from `requirements-dev.txt`, and runs the public-safe lint, type, security, test, and CLI smoke checks. It does not require `.env`, private tracker exports, resumes, credentials, production IDs, or external write access.
 
 ## Run Tests Locally
 
@@ -42,9 +42,11 @@ python -m bandit -r app/backend/job_application_agent -q
 python -m pytest -q
 ```
 
-It also smoke-checks the public mock CLI commands without printing their output:
+It also smoke-checks the public mock and public-safe status commands without printing their output:
 
 ```bash
+python -m job_application_agent.cli tracker-summary
+python -m job_application_agent.cli phase-three-status
 python -m job_application_agent.cli mock-score
 python -m job_application_agent.cli mock-queue
 python -m job_application_agent.cli mock-dashboard
@@ -66,6 +68,7 @@ python -m pytest -q
 python -m pytest tests/test_cli.py -q
 python -m pytest tests/test_mock_package_plan.py -q
 python -m pytest tests/test_phase_two_summary.py -q
+python -m pytest tests/test_phase_three_status.py -q
 ```
 
 To recreate the local test environment manually:
@@ -112,6 +115,19 @@ job-agent mock-phase-two-summary
 
 These commands read `examples/mock_jobs.json`, apply deterministic scoring rules, print mock review queue, dashboard JSON, Markdown report, package plan output, and a Phase 2 completion summary. They do not read private tracker exports, `.env`, resumes, credentials, or production systems.
 
+## Phase 3 Local Staging Status
+
+Phase 3 starts with a manually exported local Excel tracker. Keep the real export outside the repository under an ignored path such as `data/private/`, and point a private `.env` file at it with `STAGING_TRACKER_PATH`.
+
+Useful read-only status commands:
+
+```bash
+job-agent tracker-summary --env-file .env
+job-agent phase-three-status --env-file .env
+```
+
+These commands are public-safe by design. They report configuration booleans, tab names, aggregate record counts, schema completeness, required-field blank counts, quality gate status, and safety flags. They do not print private paths, workbook titles, row values, company names, job titles, URLs, contacts, notes, credentials, IDs, or generated application materials.
+
 Useful docs:
 
 - `docs/mock_cli_quickstart.md`
@@ -122,6 +138,7 @@ Useful docs:
 - `docs/phase_two_mock_dashboard.md`
 - `docs/phase_two_mock_package_plan.md`
 - `docs/phase_two_completion.md`
+- `docs/phase_three_staging_plan.md`
 - `docs/local_sync_workflow.md`
 - `docs/agent_verification.md`
 - `docs/security_model.md`
@@ -155,6 +172,8 @@ job-agent sheets-metadata --env-file .env
 job-agent tracker-headers --env-file .env
 job-agent tracker-schema --env-file .env
 job-agent tracker-quality --env-file .env
+job-agent tracker-summary --env-file .env
+job-agent phase-three-status --env-file .env
 ```
 
 Do not commit `.env`, tracker exports, resume files, generated materials, credentials, IDs, or private notes.
