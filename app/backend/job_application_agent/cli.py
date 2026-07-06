@@ -137,16 +137,16 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "sheets-metadata":
         config = RuntimeConfig.from_env(env_file=Path(args.env_file))
         adapter = build_sheets_adapter(config)
-        summary = adapter.get_metadata()
+        metadata_summary = adapter.get_metadata()
         print(
             json.dumps(
                 {
                     "config": config.safe_summary(),
                     "spreadsheet": {
-                        "title": summary.title,
-                        "locale": summary.locale,
-                        "time_zone": summary.time_zone,
-                        "tabs": [tab.__dict__ for tab in summary.tabs],
+                        "title": metadata_summary.title,
+                        "locale": metadata_summary.locale,
+                        "time_zone": metadata_summary.time_zone,
+                        "tabs": [tab.__dict__ for tab in metadata_summary.tabs],
                     },
                 },
                 indent=2,
@@ -158,13 +158,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "tracker-headers":
         config = RuntimeConfig.from_env(env_file=Path(args.env_file))
         adapter = build_sheets_adapter(config)
-        summary = adapter.get_headers(args.tabs, header_row=args.header_row)
+        headers_summary = adapter.get_headers(args.tabs, header_row=args.header_row)
         print(
             json.dumps(
                 {
                     "config": config.safe_summary(),
                     "tracker_headers": {
-                        "tabs": [tab.__dict__ for tab in summary.tabs],
+                        "tabs": [tab.__dict__ for tab in headers_summary.tabs],
                     },
                 },
                 indent=2,
@@ -210,14 +210,14 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "tracker-quality":
         config = RuntimeConfig.from_env(env_file=Path(args.env_file))
         analyzer = LocalTrackerQualityAnalyzer.from_config(config)
-        summary = analyzer.summarize(
+        quality_summary = analyzer.summarize(
             args.tabs,
             header_row=args.header_row,
             max_records=args.max_records,
         )
         fail_on_incomplete_schema = args.strict or args.fail_on_incomplete_schema
         fail_on_required_blanks = args.strict or args.fail_on_required_blanks
-        failed_quality_gates = summary.failed_quality_gates(
+        failed_quality_gates = quality_summary.failed_quality_gates(
             fail_on_incomplete_schema=fail_on_incomplete_schema,
             fail_on_required_blanks=fail_on_required_blanks,
         )
@@ -226,11 +226,11 @@ def main(argv: list[str] | None = None) -> int:
                 {
                     "config": config.safe_summary(),
                     "tracker_quality": {
-                        "is_schema_complete": summary.is_schema_complete,
-                        "has_required_blanks": summary.has_required_blanks,
+                        "is_schema_complete": quality_summary.is_schema_complete,
+                        "has_required_blanks": quality_summary.has_required_blanks,
                         "failed_quality_gates": list(failed_quality_gates),
-                        "max_records": summary.max_records,
-                        "scanned_records": summary.scanned_records,
+                        "max_records": quality_summary.max_records,
+                        "scanned_records": quality_summary.scanned_records,
                         "tabs": [
                             {
                                 "title": tab.title,
@@ -247,7 +247,7 @@ def main(argv: list[str] | None = None) -> int:
                                 ],
                                 "truncated": tab.truncated,
                             }
-                            for tab in summary.tabs
+                            for tab in quality_summary.tabs
                         ],
                     },
                 },
@@ -263,7 +263,7 @@ def main(argv: list[str] | None = None) -> int:
         config, config_error_code = _load_runtime_config_for_status(args.env_file)
         fail_on_incomplete_schema = args.strict or args.fail_on_incomplete_schema
         fail_on_required_blanks = args.strict or args.fail_on_required_blanks
-        summary = build_tracker_summary(
+        tracker_status_payload = build_tracker_summary(
             config,
             tab_titles=args.tabs,
             header_row=args.header_row,
@@ -272,24 +272,24 @@ def main(argv: list[str] | None = None) -> int:
             fail_on_required_blanks=fail_on_required_blanks,
         )
         if config_error_code:
-            summary["error_codes"] = _append_unique(
-                summary["error_codes"], config_error_code
+            tracker_status_payload["error_codes"] = _append_unique(
+                tracker_status_payload["error_codes"], config_error_code
             )
-            summary["status"] = "not_ready"
+            tracker_status_payload["status"] = "not_ready"
         print(
             json.dumps(
-                {"tracker_summary": summary},
+                {"tracker_summary": tracker_status_payload},
                 indent=2,
                 sort_keys=True,
             )
         )
-        return _status_exit_code(summary, strict=args.strict)
+        return _status_exit_code(tracker_status_payload, strict=args.strict)
 
     if args.command == "phase-three-status":
         config, config_error_code = _load_runtime_config_for_status(args.env_file)
         fail_on_incomplete_schema = args.strict or args.fail_on_incomplete_schema
         fail_on_required_blanks = args.strict or args.fail_on_required_blanks
-        status = build_phase_three_status(
+        phase_three_status = build_phase_three_status(
             config,
             tab_titles=args.tabs,
             header_row=args.header_row,
@@ -300,12 +300,14 @@ def main(argv: list[str] | None = None) -> int:
         )
         print(
             json.dumps(
-                {"phase_three_status": status},
+                {"phase_three_status": phase_three_status},
                 indent=2,
                 sort_keys=True,
             )
         )
-        return _status_exit_code(status["tracker_summary"], strict=args.strict)
+        return _status_exit_code(
+            phase_three_status["tracker_summary"], strict=args.strict
+        )
 
     if args.command == "mock-score":
         scored_jobs = score_mock_jobs(Path(args.fixture))
