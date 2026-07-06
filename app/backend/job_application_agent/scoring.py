@@ -121,7 +121,12 @@ def priority_from_score(score: int) -> ScorePriority:
 
 def _score_title_match(lead: JobLead, profile: ScoringProfile) -> RuleResult:
     if not profile.target_titles:
-        return RuleResult("title_match", 10, 20, "No target titles configured; neutral title score.")
+        return RuleResult(
+            "title_match",
+            10,
+            20,
+            "No target titles configured; neutral title score.",
+        )
 
     if _contains_any(lead.title, profile.target_titles):
         return RuleResult("title_match", 20, 20, "Role title matches a target title.")
