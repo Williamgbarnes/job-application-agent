@@ -19,6 +19,7 @@ Phase 3 foundation work is acceptable when it can:
 - report whether the workbook is readable without printing the workbook title;
 - summarize selected tabs without printing row values;
 - summarize schema completeness and required-field blank counts;
+- summarize aggregate format warnings for mapped fields without printing values;
 - return deterministic quality gate status;
 - avoid Google API usage;
 - avoid external writes, submissions, emails, messaging, or contact actions;
@@ -45,9 +46,20 @@ job-agent phase-three-status --env-file .env --tab Applications --max-records 10
 job-agent tracker-summary --env-file .env --tab Applications --strict
 ```
 
+## Aggregate quality checks
+
+The local staging summary reports counts for:
+
+- required canonical fields that are populated or blank;
+- blank records skipped during scanning;
+- unmapped header counts;
+- mapped date, URL, email, score, and status fields with checked, blank, and invalid counts.
+
+Format checks are intentionally aggregate-only. Invalid dates, URLs, emails, scores, and statuses are counted, but the command output does not include the cell values that failed validation.
+
 ## Output boundary
 
-The Phase 3 status commands may print aggregate information such as configuration booleans, selected tab names, discovered tab names, scanned record counts, blank record counts, required canonical field names, populated counts, blank counts, schema completeness booleans, quality gate names, safe error codes, and safety flags.
+The Phase 3 status commands may print aggregate information such as configuration booleans, selected tab names, discovered tab names, scanned record counts, blank record counts, required canonical field names, populated counts, blank counts, mapped field names, format categories, invalid format counts, schema completeness booleans, quality gate names, safe error codes, and safety flags.
 
 The commands must not print private configuration contents, local file paths, workbook titles derived from private filenames, company names, role titles, URLs, contact details, notes, row values, tracker identifiers, spreadsheet identifiers, credentials, resumes, or generated application materials.
 
@@ -68,5 +80,5 @@ bash scripts/check-local.sh
 Run focused tests:
 
 ```bash
-python -m pytest tests/test_phase_three_status.py -q
+python -m pytest tests/test_phase_three_status.py tests/test_tracker_quality.py tests/test_tracker_format_quality.py -q
 ```
