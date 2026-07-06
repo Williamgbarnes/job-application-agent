@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from typing import Sequence
 
 from openpyxl import Workbook
 
@@ -216,8 +217,8 @@ def _write_env_file(tmp_path: Path, tracker_path: Path) -> Path:
 def _write_tracker(
     tmp_path: Path,
     *,
-    headers: list[str] | None = None,
-    rows: list[list[str | None]],
+    headers: Sequence[str] | None = None,
+    rows: Sequence[Sequence[str | None]],
 ) -> Path:
     tracker_path = tmp_path / "staging_job_tracker.xlsx"
     workbook = Workbook()
