@@ -97,6 +97,8 @@ def test_phase_three_status_reports_missing_local_tracker_without_private_data()
     assert status["acceptance_criteria"]["read_only_first"] is True
     assert status["acceptance_criteria"]["scheduled_task_rules_loaded"] is True
     assert status["acceptance_criteria"]["scheduled_task_rules_aligned"] is True
+    assert status["acceptance_criteria"]["workflow_rules_loaded"] is True
+    assert status["acceptance_criteria"]["workflow_rules_aligned"] is True
     assert (
         status["acceptance_criteria"]["private_scheduled_workflows_source_of_truth"]
         is True
@@ -106,6 +108,8 @@ def test_phase_three_status_reports_missing_local_tracker_without_private_data()
         is True
     )
     assert status["scheduled_task_rules"]["is_aligned"] is True
+    assert status["workflow_rules"]["is_aligned"] is True
+    assert status["workflow_rules"]["workflow_count"] == 3
     assert (
         status["scheduled_task_rules"][
             "current_private_workflows_remain_source_of_truth"
@@ -164,6 +168,8 @@ def test_phase_three_status_cli_prints_ready_sanitized_output(
     assert status["tracker_summary"]["quality"]["scanned_records"] == 1
     assert status["tracker_summary"]["source"]["path_disclosed"] is False
     assert status["scheduled_task_rules"]["is_aligned"] is True
+    assert status["workflow_rules"]["is_aligned"] is True
+    assert status["workflow_rules"]["workflow_count"] == 3
     assert "Example Co" not in repr(output)
     assert "Engineering Manager" not in repr(output)
     assert str(tracker_path) not in repr(output)

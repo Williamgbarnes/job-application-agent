@@ -21,6 +21,7 @@ from job_application_agent.tracker_quality import (
     TabQualitySummary,
     TrackerQualitySummary,
 )
+from job_application_agent.workflow_rules import build_workflow_rules_status
 
 DEFAULT_STAGING_MAX_RECORDS = 1000
 
@@ -125,6 +126,11 @@ def build_phase_three_status(
         require_human_approval=config.require_human_approval,
         allow_external_submission=config.allow_external_submission,
     )
+    workflow_rules = build_workflow_rules_status(
+        dry_run=config.dry_run,
+        require_human_approval=config.require_human_approval,
+        allow_external_submission=config.allow_external_submission,
+    )
     acceptance_criteria = {
         "local_excel_tracker_configured": source["configured"],
         "local_excel_tracker_readable": source["readable"],
@@ -143,6 +149,8 @@ def build_phase_three_status(
         "scheduled_task_external_actions_disabled": scheduled_task_rules[
             "external_writes_disabled_by_default"
         ],
+        "workflow_rules_loaded": True,
+        "workflow_rules_aligned": workflow_rules["is_aligned"],
     }
     phase_status = "ready" if all(acceptance_criteria.values()) else "not_ready"
     if phase_status == "ready" and tracker_summary["status"] != "ready":
@@ -153,6 +161,7 @@ def build_phase_three_status(
         "status": phase_status,
         "acceptance_criteria": acceptance_criteria,
         "scheduled_task_rules": scheduled_task_rules,
+        "workflow_rules": workflow_rules,
         "tracker_summary": tracker_summary,
         "next_steps": _next_steps(tracker_summary),
         "safety": {
