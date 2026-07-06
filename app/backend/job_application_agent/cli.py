@@ -8,8 +8,9 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from typing import Any
 
-from job_application_agent.config import RuntimeConfig
+from job_application_agent.config import ConfigurationError, RuntimeConfig
 from job_application_agent.integrations.sheets import (
     DEFAULT_TRACKER_HEADER_TABS,
     build_sheets_adapter,
@@ -29,6 +30,10 @@ from job_application_agent.mock_package_plan import (
     DEFAULT_PACKAGE_PLAN_LIMIT,
     build_mock_package_plan,
     mock_package_plan_to_dict,
+)
+from job_application_agent.phase_three_status import (
+    build_phase_three_status,
+    build_tracker_summary,
 )
 from job_application_agent.phase_two_summary import build_phase_two_summary
 from job_application_agent.review_queue import (
@@ -69,27 +74,21 @@ def main(argv: list[str] | None = None) -> int:
         "tracker-quality", help="Print log-safe tracker quality counts"
     )
     _add_header_args(quality_parser)
-    quality_parser.add_argument(
-        "--max-records",
-        type=int,
-        default=1000,
-        help="Maximum non-blank records to scan per tab. Defaults to 1000.",
+    _add_tracker_quality_args(quality_parser)
+
+    tracker_summary_parser = subparsers.add_parser(
+        "tracker-summary",
+        help="Print a public-safe local staging tracker readiness summary",
     )
-    quality_parser.add_argument(
-        "--fail-on-incomplete-schema",
-        action="store_true",
-        help="Return a non-zero exit code if required canonical columns are missing.",
+    _add_header_args(tracker_summary_parser)
+    _add_tracker_quality_args(tracker_summary_parser)
+
+    phase_three_parser = subparsers.add_parser(
+        "phase-three-status",
+        help="Print a public-safe Phase 3 local staging readiness status",
     )
-    quality_parser.add_argument(
-        "--fail-on-required-blanks",
-        action="store_true",
-        help="Return a non-zero exit code if required canonical fields have blanks.",
-    )
-    quality_parser.add_argument(
-        "--strict",
-        action="store_true",
-        help="Enable all tracker quality gates.",
-    )
+    _add_header_args(phase_three_parser)
+    _add_tracker_quality_args(phase_three_parser)
 
     mock_score_parser = subparsers.add_parser(
         "mock-score", help="Score sanitized mock job fixtures"
@@ -260,6 +259,54 @@ def main(argv: list[str] | None = None) -> int:
             return QUALITY_GATE_FAILURE_EXIT_CODE
         return 0
 
+    if args.command == "tracker-summary":
+        config, config_error_code = _load_runtime_config_for_status(args.env_file)
+        fail_on_incomplete_schema = args.strict or args.fail_on_incomplete_schema
+        fail_on_required_blanks = args.strict or args.fail_on_required_blanks
+        summary = build_tracker_summary(
+            config,
+            tab_titles=args.tabs,
+            header_row=args.header_row,
+            max_records=args.max_records,
+            fail_on_incomplete_schema=fail_on_incomplete_schema,
+            fail_on_required_blanks=fail_on_required_blanks,
+        )
+        if config_error_code:
+            summary["error_codes"] = _append_unique(
+                summary["error_codes"], config_error_code
+            )
+            summary["status"] = "not_ready"
+        print(
+            json.dumps(
+                {"tracker_summary": summary},
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return _status_exit_code(summary, strict=args.strict)
+
+    if args.command == "phase-three-status":
+        config, config_error_code = _load_runtime_config_for_status(args.env_file)
+        fail_on_incomplete_schema = args.strict or args.fail_on_incomplete_schema
+        fail_on_required_blanks = args.strict or args.fail_on_required_blanks
+        status = build_phase_three_status(
+            config,
+            tab_titles=args.tabs,
+            header_row=args.header_row,
+            max_records=args.max_records,
+            fail_on_incomplete_schema=fail_on_incomplete_schema,
+            fail_on_required_blanks=fail_on_required_blanks,
+            config_error_code=config_error_code,
+        )
+        print(
+            json.dumps(
+                {"phase_three_status": status},
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return _status_exit_code(status["tracker_summary"], strict=args.strict)
+
     if args.command == "mock-score":
         scored_jobs = score_mock_jobs(Path(args.fixture))
         print(
@@ -409,6 +456,30 @@ def _add_header_args(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def _add_tracker_quality_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--max-records",
+        type=int,
+        default=1000,
+        help="Maximum non-blank records to scan per tab. Defaults to 1000.",
+    )
+    parser.add_argument(
+        "--fail-on-incomplete-schema",
+        action="store_true",
+        help="Return a non-zero exit code if required canonical columns are missing.",
+    )
+    parser.add_argument(
+        "--fail-on-required-blanks",
+        action="store_true",
+        help="Return a non-zero exit code if required canonical fields have blanks.",
+    )
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Enable all tracker quality gates.",
+    )
+
+
 def _add_mock_fixture_arg(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--fixture",
@@ -454,6 +525,27 @@ def _add_mock_package_plan_top_limit_arg(parser: argparse.ArgumentParser) -> Non
             f"{DEFAULT_PACKAGE_PLAN_LIMIT}."
         ),
     )
+
+
+def _load_runtime_config_for_status(env_file: str) -> tuple[RuntimeConfig, str | None]:
+    try:
+        return RuntimeConfig.from_env(env_file=Path(env_file)), None
+    except ConfigurationError:
+        return RuntimeConfig(), "invalid_runtime_configuration"
+
+
+def _append_unique(values: list[str], value: str) -> list[str]:
+    if value in values:
+        return values
+    return [*values, value]
+
+
+def _status_exit_code(payload: dict[str, Any], *, strict: bool) -> int:
+    if strict and payload["status"] != "ready":
+        return QUALITY_GATE_FAILURE_EXIT_CODE
+    if payload["failed_quality_gates"]:
+        return QUALITY_GATE_FAILURE_EXIT_CODE
+    return 0
 
 
 def _non_negative_int(value: str) -> int:
