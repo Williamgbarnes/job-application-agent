@@ -3,24 +3,27 @@ set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
-if command -v python3 >/dev/null 2>&1; then
-  PYTHON_CMD=(python3)
-elif command -v python >/dev/null 2>&1; then
-  PYTHON_CMD=(python)
-elif command -v py >/dev/null 2>&1; then
-  PYTHON_CMD=(py -3)
-else
-  echo "Python 3.11 or newer is required." >&2
-  exit 1
-fi
-
-"${PYTHON_CMD[@]}" - <<'PY'
+PYTHON_CMD=()
+for candidate in "python3" "python" "py -3"; do
+  # Split candidates such as "py -3" without using eval.
+  read -r -a candidate_parts <<< "$candidate"
+  if "${candidate_parts[@]}" - <<'PY' >/dev/null 2>&1
 import sys
 
 if sys.version_info < (3, 11):
-    version = ".".join(str(part) for part in sys.version_info[:3])
-    raise SystemExit(f"Python 3.11 or newer is required; found {version}.")
+    raise SystemExit(1)
 PY
+  then
+    PYTHON_CMD=("${candidate_parts[@]}")
+    break
+  fi
+done
+
+if [ "${#PYTHON_CMD[@]}" -eq 0 ]; then
+  echo "Python 3.11 or newer is required." >&2
+  echo "Install Python, then make sure python3, python, or py -3 runs from this shell." >&2
+  exit 1
+fi
 
 VENV_DIR="${VENV_DIR:-.venv}"
 "${PYTHON_CMD[@]}" -m venv "$VENV_DIR"
