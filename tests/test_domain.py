@@ -59,7 +59,7 @@ def test_job_lead_accepts_public_safe_fields() -> None:
 def test_job_lead_validation_rejects_invalid_values(
     kwargs: dict[str, object], message: str
 ) -> None:
-    values = {
+    values: dict[str, object] = {
         "id": "lead-1",
         "source": "mock",
         "company": "Example Company",
