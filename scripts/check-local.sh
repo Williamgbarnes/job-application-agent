@@ -44,5 +44,6 @@ fi
 "$VENV_PYTHON" -m job_application_agent.cli mock-dashboard >/dev/null
 "$VENV_PYTHON" -m job_application_agent.cli mock-dashboard-report >/dev/null
 "$VENV_PYTHON" -m job_application_agent.cli mock-package-plan >/dev/null
+"$VENV_PYTHON" -m job_application_agent.cli mock-phase-two-summary >/dev/null
 
 echo "Local public-safe checks passed."
