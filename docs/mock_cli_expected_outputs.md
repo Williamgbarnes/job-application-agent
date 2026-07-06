@@ -11,6 +11,7 @@ This guide summarizes the expected shape of each public mock CLI command.
 | `job-agent mock-dashboard` | JSON summary metrics and top ranked mock items. |
 | `job-agent mock-dashboard-report` | Markdown summary report. |
 | `job-agent mock-package-plan` | JSON checklist-style planning placeholders. |
+| `job-agent mock-phase-two-summary` | JSON Phase 2 completion status, command map, nested outputs, and safety flags. |
 
 ## Filter examples
 
@@ -19,6 +20,7 @@ This guide summarizes the expected shape of each public mock CLI command.
 | `job-agent mock-queue --min-score 75` | Show higher-scoring mock items. |
 | `job-agent mock-dashboard --priority high` | Show dashboard data for high-priority mock items. |
 | `job-agent mock-package-plan --top-limit 2` | Limit the number of planning placeholders. |
+| `job-agent mock-phase-two-summary --priority high --top-limit 2` | Show a focused Phase 2 completion summary. |
 
 ## Fixture
 
