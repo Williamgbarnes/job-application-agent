@@ -50,6 +50,7 @@ python -m job_application_agent.cli mock-queue
 python -m job_application_agent.cli mock-dashboard
 python -m job_application_agent.cli mock-dashboard-report
 python -m job_application_agent.cli mock-package-plan
+python -m job_application_agent.cli mock-phase-two-summary
 ```
 
 For focused test iteration after the script has created `.venv`, activate the environment and run the needed tests directly:
@@ -64,6 +65,7 @@ fi
 python -m pytest -q
 python -m pytest tests/test_cli.py -q
 python -m pytest tests/test_mock_package_plan.py -q
+python -m pytest tests/test_phase_two_summary.py -q
 ```
 
 To recreate the local test environment manually:
@@ -105,9 +107,10 @@ job-agent mock-queue
 job-agent mock-dashboard
 job-agent mock-dashboard-report
 job-agent mock-package-plan
+job-agent mock-phase-two-summary
 ```
 
-These commands read `examples/mock_jobs.json`, apply deterministic scoring rules, and print mock review queue, dashboard JSON, Markdown report, and package plan output. They do not read private tracker exports, `.env`, resumes, credentials, or production systems.
+These commands read `examples/mock_jobs.json`, apply deterministic scoring rules, print mock review queue, dashboard JSON, Markdown report, package plan output, and a Phase 2 completion summary. They do not read private tracker exports, `.env`, resumes, credentials, or production systems.
 
 Useful docs:
 
@@ -118,6 +121,7 @@ Useful docs:
 - `docs/phase_two_mock_queue.md`
 - `docs/phase_two_mock_dashboard.md`
 - `docs/phase_two_mock_package_plan.md`
+- `docs/phase_two_completion.md`
 - `docs/local_sync_workflow.md`
 - `docs/agent_verification.md`
 - `docs/security_model.md`
