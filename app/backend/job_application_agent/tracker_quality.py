@@ -7,8 +7,11 @@ It does not return individual row values and does not write to the tracker.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date, datetime
 from pathlib import Path
+import re
 from typing import Any, Sequence
+from urllib.parse import urlparse
 
 from job_application_agent.config import ConfigurationError, RuntimeConfig
 from job_application_agent.integrations.sheets import (
@@ -21,6 +24,46 @@ from job_application_agent.tracker_schema import (
     TabSchemaMapping,
     TRACKER_TAB_SCHEMAS,
     map_tracker_headers,
+)
+
+FORMAT_FIELD_KINDS: dict[str, str] = {
+    "contact_date": "date",
+    "date_applied": "date",
+    "email": "email",
+    "job_url": "url",
+    "last_contacted": "date",
+    "match_score": "score",
+    "status": "status",
+}
+
+ALLOWED_STATUS_VALUES = frozenset(
+    {
+        "accepted",
+        "applied",
+        "archived",
+        "closed",
+        "contacted",
+        "declined",
+        "follow up",
+        "followup",
+        "in progress",
+        "in review",
+        "interview",
+        "interviewing",
+        "lead",
+        "new",
+        "not started",
+        "offer",
+        "onsite",
+        "phone screen",
+        "queued",
+        "rejected",
+        "review",
+        "saved",
+        "screen",
+        "submitted",
+        "withdrawn",
+    }
 )
 
 
@@ -38,6 +81,21 @@ class RequiredFieldQuality:
 
 
 @dataclass(frozen=True)
+class FieldFormatQuality:
+    """Aggregate format counts for one mapped canonical field."""
+
+    canonical_field: str
+    value_kind: str
+    checked_count: int
+    blank_count: int
+    invalid_count: int
+
+    @property
+    def has_invalid_values(self) -> bool:
+        return self.invalid_count > 0
+
+
+@dataclass(frozen=True)
 class TabQualitySummary:
     """Public-safe quality summary for one tracker tab."""
 
@@ -48,11 +106,16 @@ class TabQualitySummary:
     missing_required_fields: tuple[str, ...]
     unmapped_headers: tuple[str, ...]
     required_fields: tuple[RequiredFieldQuality, ...]
+    format_fields: tuple[FieldFormatQuality, ...]
     truncated: bool
 
     @property
     def has_required_blanks(self) -> bool:
         return any(field.has_blanks for field in self.required_fields)
+
+    @property
+    def has_format_warnings(self) -> bool:
+        return any(field.has_invalid_values for field in self.format_fields)
 
 
 @dataclass(frozen=True)
@@ -74,17 +137,24 @@ class TrackerQualitySummary:
     def has_required_blanks(self) -> bool:
         return any(tab.has_required_blanks for tab in self.tabs)
 
+    @property
+    def has_format_warnings(self) -> bool:
+        return any(tab.has_format_warnings for tab in self.tabs)
+
     def failed_quality_gates(
         self,
         *,
         fail_on_incomplete_schema: bool = False,
         fail_on_required_blanks: bool = False,
+        fail_on_format_warnings: bool = False,
     ) -> tuple[str, ...]:
         failures: list[str] = []
         if fail_on_incomplete_schema and not self.is_schema_complete:
             failures.append("incomplete_schema")
         if fail_on_required_blanks and self.has_required_blanks:
             failures.append("required_blanks")
+        if fail_on_format_warnings and self.has_format_warnings:
+            failures.append("format_warnings")
         return tuple(failures)
 
 
@@ -153,8 +223,10 @@ def _summarize_tab_quality(
         if field.required
     )
     required_columns = _required_column_indexes(tab_mapping.mapped_fields, required_fields)
+    format_columns = _format_column_indexes(tab_mapping.mapped_fields)
     populated_counts = {field_name: 0 for field_name in required_fields}
     blank_counts = {field_name: 0 for field_name in required_fields}
+    format_counts = _initial_format_counts(format_columns)
     scanned_records = 0
     blank_records_skipped = 0
     truncated = False
@@ -173,6 +245,7 @@ def _summarize_tab_quality(
                 blank_counts[field_name] += 1
             else:
                 populated_counts[field_name] += 1
+        _count_format_fields(row, format_columns, format_counts)
 
     _count_missing_required_fields_as_blank(
         required_fields,
@@ -196,6 +269,16 @@ def _summarize_tab_quality(
             )
             for field_name in required_fields
         ),
+        format_fields=tuple(
+            FieldFormatQuality(
+                canonical_field=field_name,
+                value_kind=FORMAT_FIELD_KINDS[field_name],
+                checked_count=format_counts[field_name]["checked_count"],
+                blank_count=format_counts[field_name]["blank_count"],
+                invalid_count=format_counts[field_name]["invalid_count"],
+            )
+            for field_name in sorted(format_columns)
+        ),
         truncated=truncated,
     )
 
@@ -210,6 +293,40 @@ def _required_column_indexes(
         for field in mapped_fields
         if field.canonical_field in required_field_set
     }
+
+
+def _format_column_indexes(
+    mapped_fields: tuple[HeaderFieldMapping, ...]
+) -> dict[str, int]:
+    return {
+        field.canonical_field: field.column_index
+        for field in mapped_fields
+        if field.canonical_field in FORMAT_FIELD_KINDS
+    }
+
+
+def _initial_format_counts(
+    format_columns: dict[str, int]
+) -> dict[str, dict[str, int]]:
+    return {
+        field_name: {"blank_count": 0, "checked_count": 0, "invalid_count": 0}
+        for field_name in format_columns
+    }
+
+
+def _count_format_fields(
+    row: tuple[Any, ...],
+    format_columns: dict[str, int],
+    format_counts: dict[str, dict[str, int]],
+) -> None:
+    for field_name, column_index in format_columns.items():
+        value = _value_at(row, column_index)
+        if _is_blank_value(value):
+            format_counts[field_name]["blank_count"] += 1
+            continue
+        format_counts[field_name]["checked_count"] += 1
+        if not _has_valid_format(field_name, value):
+            format_counts[field_name]["invalid_count"] += 1
 
 
 def _count_missing_required_fields_as_blank(
@@ -234,7 +351,8 @@ def _load_workbook(path: Path) -> Any:
         from openpyxl import load_workbook
     except ImportError as exc:  # pragma: no cover - import depends on optional deps
         raise SheetsAdapterError(
-            "Local Excel support requires openpyxl. Install with: pip install -e '.[excel]'"
+            "Local Excel support requires openpyxl. "
+            "Install with: pip install -e '.[excel]'"
         ) from exc
 
     try:
@@ -260,3 +378,66 @@ def _is_blank_value(value: Any) -> bool:
     if value is None:
         return True
     return str(value).strip() == ""
+
+
+def _has_valid_format(field_name: str, value: Any) -> bool:
+    value_kind = FORMAT_FIELD_KINDS[field_name]
+    if value_kind == "date":
+        return _has_valid_date_format(value)
+    if value_kind == "email":
+        return _has_valid_email_format(value)
+    if value_kind == "score":
+        return _has_valid_score_format(value)
+    if value_kind == "status":
+        return _has_valid_status_format(value)
+    if value_kind == "url":
+        return _has_valid_url_format(value)
+    return True
+
+
+def _has_valid_date_format(value: Any) -> bool:
+    if isinstance(value, datetime | date):
+        return True
+    if not isinstance(value, str):
+        return False
+    stripped_value = value.strip()
+    if not stripped_value:
+        return False
+    for date_format in ("%Y-%m-%d", "%m/%d/%Y", "%m/%d/%y"):
+        try:
+            datetime.strptime(stripped_value, date_format)
+            return True
+        except ValueError:
+            continue
+    return False
+
+
+def _has_valid_email_format(value: Any) -> bool:
+    if not isinstance(value, str):
+        return False
+    return bool(re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", value.strip()))
+
+
+def _has_valid_score_format(value: Any) -> bool:
+    try:
+        score = float(str(value).strip().removesuffix("%"))
+    except ValueError:
+        return False
+    return 0 <= score <= 100
+
+
+def _has_valid_status_format(value: Any) -> bool:
+    if not isinstance(value, str):
+        return False
+    return _normalize_status_value(value) in ALLOWED_STATUS_VALUES
+
+
+def _has_valid_url_format(value: Any) -> bool:
+    if not isinstance(value, str):
+        return False
+    parsed_url = urlparse(value.strip())
+    return parsed_url.scheme in {"http", "https"} and bool(parsed_url.netloc)
+
+
+def _normalize_status_value(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", value.strip().lower()).strip()
