@@ -22,6 +22,7 @@ job-agent mock-queue
 job-agent mock-dashboard
 job-agent mock-dashboard-report
 job-agent mock-package-plan
+job-agent mock-phase-two-summary
 ```
 
 The commands use the sanitized fixture at `examples/mock_jobs.json` by default.
@@ -32,6 +33,15 @@ The commands use the sanitized fixture at `examples/mock_jobs.json` by default.
 job-agent mock-queue --min-score 75
 job-agent mock-dashboard --priority high --top-limit 3
 job-agent mock-package-plan --priority high --top-limit 2
+job-agent mock-phase-two-summary --priority high --top-limit 2
+```
+
+## Phase 2 completion check
+
+Use the final summary command to confirm the public mock workflow covers the Phase 2 reviewer path:
+
+```bash
+job-agent mock-phase-two-summary
 ```
 
 ## Public demo boundary
