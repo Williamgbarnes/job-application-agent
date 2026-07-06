@@ -283,6 +283,99 @@ def test_mock_queue_cli_accepts_repeated_priority_filters_and_reranks(
     assert str(fixture_path) not in repr(output)
 
 
+def test_mock_queue_cli_handles_empty_filtered_results(
+    tmp_path: Path, capsys
+) -> None:
+    fixture_path = _write_mock_queue_fixture(tmp_path)
+
+    exit_code = main(
+        [
+            "mock-queue",
+            "--fixture",
+            str(fixture_path),
+            "--min-score",
+            "999",
+        ]
+    )
+
+    assert exit_code == 0
+    output = json.loads(capsys.readouterr().out)
+    queue = output["mock_queue"]
+    assert queue["filters"] == {"min_score": 999, "priorities": []}
+    assert queue["count"] == 0
+    assert queue["items"] == []
+    assert str(fixture_path) not in repr(output)
+
+
+def test_mock_dashboard_cli_handles_empty_filtered_results(
+    tmp_path: Path, capsys
+) -> None:
+    fixture_path = _write_mock_queue_fixture(tmp_path)
+
+    exit_code = main(
+        [
+            "mock-dashboard",
+            "--fixture",
+            str(fixture_path),
+            "--min-score",
+            "999",
+            "--top-limit",
+            "2",
+        ]
+    )
+
+    assert exit_code == 0
+    output = json.loads(capsys.readouterr().out)
+    dashboard = output["mock_dashboard"]
+    assert dashboard["filters"] == {"min_score": 999, "priorities": []}
+    assert dashboard["summary"]["count"] == 0
+    assert dashboard["summary"]["priority_counts"] == {
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+    }
+    assert dashboard["summary"]["score_summary"] == {
+        "average": None,
+        "max": None,
+        "min": None,
+    }
+    assert dashboard["top_limit"] == 2
+    assert dashboard["top_items"] == []
+    assert str(fixture_path) not in repr(output)
+
+
+def test_mock_package_plan_cli_handles_empty_filtered_results(
+    tmp_path: Path, capsys
+) -> None:
+    fixture_path = _write_mock_queue_fixture(tmp_path)
+
+    exit_code = main(
+        [
+            "mock-package-plan",
+            "--fixture",
+            str(fixture_path),
+            "--min-score",
+            "999",
+            "--top-limit",
+            "2",
+        ]
+    )
+
+    assert exit_code == 0
+    output = json.loads(capsys.readouterr().out)
+    plan = output["mock_package_plan"]
+    assert plan["filters"] == {"min_score": 999, "priorities": []}
+    assert plan["count"] == 0
+    assert plan["top_limit"] == 2
+    assert plan["items"] == []
+    assert plan["safety"] == {
+        "generates_application_materials": False,
+        "performs_external_writes": False,
+        "requires_human_approval": True,
+    }
+    assert str(fixture_path) not in repr(output)
+
+
 def _write_env_file(tmp_path: Path, tracker_path: Path) -> Path:
     env_file = tmp_path / ".env"
     env_file.write_text(
