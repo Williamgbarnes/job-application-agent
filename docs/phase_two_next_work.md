@@ -11,7 +11,7 @@ These notes list small follow-up ideas for the public demo.
 ## Tests
 
 - Add tests for filtered output.
-- Add tests for empty result cases.
+- Add tests for empty result cases. The public mock CLI commands now cover empty filtered outputs in `tests/test_cli.py`.
 - Add tests for report formatting.
 
 ## Code
