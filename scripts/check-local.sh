@@ -39,6 +39,8 @@ fi
 "$VENV_PYTHON" -m bandit -r app/backend/job_application_agent -q
 "$VENV_PYTHON" -m pytest -q
 
+"$VENV_PYTHON" -m job_application_agent.cli tracker-summary >/dev/null
+"$VENV_PYTHON" -m job_application_agent.cli phase-three-status >/dev/null
 "$VENV_PYTHON" -m job_application_agent.cli mock-score >/dev/null
 "$VENV_PYTHON" -m job_application_agent.cli mock-queue >/dev/null
 "$VENV_PYTHON" -m job_application_agent.cli mock-dashboard >/dev/null
