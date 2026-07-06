@@ -128,6 +128,7 @@ def test_scoring_result_converts_to_score_report() -> None:
     assert report.score == result.score
     assert report.priority == result.priority
     assert report.created_at == created_at
+    assert report.rationale is not None
     assert "Role title matches" in report.rationale
 
 
