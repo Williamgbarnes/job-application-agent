@@ -126,7 +126,7 @@ job-agent tracker-summary --env-file .env
 job-agent phase-three-status --env-file .env
 ```
 
-These commands are public-safe by design. They report configuration booleans, tab names, aggregate record counts, schema completeness, required-field blank counts, quality gate status, and safety flags. They do not print private paths, workbook titles, row values, company names, job titles, URLs, contacts, notes, credentials, IDs, or generated application materials.
+These commands are public-safe by design. They report configuration booleans, tab names, aggregate record counts, schema completeness, required-field blank counts, format warning counts, quality gate status, scheduled-task rule alignment, and safety flags. They do not print private paths, workbook titles, row values, company names, job titles, URLs, contacts, notes, credentials, IDs, scheduled-task payloads, or generated application materials.
 
 Useful docs:
 
@@ -144,6 +144,7 @@ Useful docs:
 - `docs/security_model.md`
 - `docs/real_data_boundary.md`
 - `docs/human_in_the_loop_policy.md`
+- `docs/scheduled_task_rules.md`
 - `docs/github_free_plan.md`
 - `docs/review_workflows.md`
 
