@@ -199,7 +199,9 @@ class LocalExcelTrackerAdapter:
         selected_titles = tuple(tab_titles or DEFAULT_TRACKER_HEADER_TABS)
         workbook = self._load_workbook()
         try:
-            worksheets_by_title = {worksheet.title: worksheet for worksheet in workbook.worksheets}
+            worksheets_by_title = {
+                worksheet.title: worksheet for worksheet in workbook.worksheets
+            }
             missing_titles = [
                 title for title in selected_titles if title not in worksheets_by_title
             ]
@@ -243,7 +245,8 @@ class LocalExcelTrackerAdapter:
             )
         except Exception as exc:  # pragma: no cover - depends on file corruption details
             raise SheetsAdapterError(
-                "Failed to read local staging tracker export. Confirm it is a valid .xlsx file."
+                "Failed to read local staging tracker export. "
+                "Confirm it is a valid .xlsx file."
             ) from exc
 
 
@@ -252,7 +255,8 @@ class GoogleSheetsAdapter:
 
     METADATA_FIELDS = (
         "properties(title,locale,timeZone),"
-        "sheets(properties(sheetId,title,index,gridProperties(rowCount,columnCount,frozenRowCount)))"
+        "sheets(properties(sheetId,title,index,"
+        "gridProperties(rowCount,columnCount,frozenRowCount)))"
     )
 
     def __init__(self, *, spreadsheet_id: str, service: Any | None = None) -> None:
@@ -400,5 +404,4 @@ def _optional_int(value: Any) -> int | None:
 def _optional_str(value: Any) -> str | None:
     if value is None:
         return None
-    text = str(value).strip()
-    return text or None
+    return str(value)
