@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-SCHEDULED_TASK_RULES_VERSION = "2026-07-05"
+SCHEDULED_TASK_RULES_VERSION = "2026-07-14"
 MINIMUM_SCHEDULED_POLL_INTERVAL_MINUTES = 60
 _SOURCE_OF_TRUTH_KEY = "current_" + "pri" + "vate_" + "workflows_remain_source_of_truth"
 _NO_TASK_PAYLOADS_KEY = "no_" + "pri" + "vate_" + "task_payloads_in_repo"
@@ -35,6 +35,11 @@ def build_scheduled_task_rules_status(
         "no_runtime_task_payloads_in_repo": True,
         "condition_watches_notify_only_on_match": True,
         "minimum_poll_interval_enforced": True,
+        "baseline_source_coverage_required_each_run": True,
+        "conditional_expansion_is_additional_to_baseline": True,
+        "official_source_verification_required": True,
+        "stable_identifiers_define_hard_duplicates": True,
+        "successful_zero_result_requires_complete_coverage": True,
     }
 
     return {

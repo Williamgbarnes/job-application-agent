@@ -10,11 +10,18 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from job_application_agent.scan_coverage import (
+    DEFAULT_ADDITIONAL_SOURCE_MINIMUM,
+    DEFAULT_ATS_ECOSYSTEM_COUNT,
+    DEFAULT_BASELINE_DIRECT_SOURCE_COUNT,
+    DEFAULT_BOARD_COUNT,
+    DEFAULT_TITLE_FAMILY_COUNT,
+)
 from job_application_agent.scheduled_task_rules import (
     MINIMUM_SCHEDULED_POLL_INTERVAL_MINUTES,
 )
 
-WORKFLOW_RULES_VERSION = "2026-07-06"
+WORKFLOW_RULES_VERSION = "2026-07-14"
 DAILY_JOB_SCAN = "daily_job_scan"
 ARCHIVE_JOB = "archive_job"
 APPLICATION_PREP = "application_prep"
@@ -65,10 +72,14 @@ WORKFLOW_RULE_CONTRACTS: tuple[WorkflowRuleContract, ...] = (
         label="Lead discovery workflow template",
         purpose=(
             "Collect candidate opportunities from user-approved sources and "
-            "queue them for review using configurable matching rules."
+            "queue them for review using configurable matching and coverage rules."
         ),
         configurable_settings=(
             "source allowlist and priority",
+            "mandatory baseline source groups",
+            "conditional additional-source expansion",
+            "title-query family rotation",
+            "official-source verification policy",
             "scan cadence within the global polling limit",
             "deduplication strategy",
             "ranking or score threshold",
@@ -78,16 +89,24 @@ WORKFLOW_RULE_CONTRACTS: tuple[WorkflowRuleContract, ...] = (
         allowed_inputs=(
             "public-safe source adapter shape",
             "sanitized sample opportunity fixtures",
+            "aggregate coverage counts",
             "user criteria supplied outside the public repo",
             "public scoring and ranking extension points",
         ),
         allowed_outputs=(
             "candidate recommendation summary",
+            "source coverage completion summary",
             "deduplication summary",
             "ranking or score summary",
             "review queue proposal",
         ),
         required_controls=(
+            "complete mandatory baseline source groups on every run",
+            "keep conditional expansion distinct from baseline coverage",
+            "attempt every configured query family and discovery group",
+            "verify promising results on an official source when accessible",
+            "use stable posting identifiers for hard duplicate decisions",
+            "block successful zero-result status when coverage is incomplete",
             "deduplicate before queueing",
             "rank or score before downstream preparation",
             "preserve source attribution without exposing user-specific identifiers",
@@ -104,9 +123,13 @@ WORKFLOW_RULE_CONTRACTS: tuple[WorkflowRuleContract, ...] = (
             "submitting, applying, emailing, messaging, or contacting autonomously",
             "printing user-specific lead or tracker values",
             "committing user-specific source configuration",
+            "treating normalized entity and title as a hard duplicate by itself",
             "promoting a candidate without human review",
         ),
-        no_op_behavior="Use configurable quiet/no-op behavior when no match criteria are met.",
+        no_op_behavior=(
+            "A zero-result run may be complete only after all required coverage "
+            "groups and any triggered additional sources are complete."
+        ),
     ),
     WorkflowRuleContract(
         workflow_id=ARCHIVE_JOB,
@@ -214,7 +237,7 @@ def build_workflow_rules_status(
     require_human_approval: bool,
     allow_external_submission: bool,
 ) -> dict[str, Any]:
-    """Return sanitized workflow rule alignment for recurring workflow templates."""
+    """Return sanitized workflow rule alignment for recurring templates."""
 
     external_writes_disabled = not allow_external_submission
     read_only_first = dry_run and external_writes_disabled
@@ -239,6 +262,20 @@ def build_workflow_rules_status(
         "configuration_model": "private app supplies user-specific settings",
         "private_configuration_boundary": PRIVATE_CONFIGURATION_BOUNDARY,
         "minimum_poll_interval_minutes": MINIMUM_SCHEDULED_POLL_INTERVAL_MINUTES,
+        "source_coverage_policy": {
+            "baseline_required_each_run": True,
+            "baseline_direct_source_count": DEFAULT_BASELINE_DIRECT_SOURCE_COUNT,
+            "configured_board_count": DEFAULT_BOARD_COUNT,
+            "configured_title_family_count": DEFAULT_TITLE_FAMILY_COUNT,
+            "configured_ats_ecosystem_count": DEFAULT_ATS_ECOSYSTEM_COUNT,
+            "conditional_additional_source_minimum": (
+                DEFAULT_ADDITIONAL_SOURCE_MINIMUM
+            ),
+            "conditional_expansion_excludes_baseline": True,
+            "official_source_verification_required": True,
+            "zero_result_requires_complete_coverage": True,
+            "stable_identifiers_define_hard_duplicates": True,
+        },
         "workflow_count": len(workflow_statuses),
         "is_aligned": all(workflow["is_aligned"] for workflow in workflow_statuses),
         "workflows": workflow_statuses,
@@ -267,6 +304,16 @@ def _build_single_workflow_status(
         ),
         "prohibited_actions_defined": bool(contract.prohibited_actions),
     }
+    if contract.workflow_id == DAILY_JOB_SCAN:
+        workflow_checks.update(
+            {
+                "baseline_coverage_required": True,
+                "conditional_expansion_is_additional": True,
+                "zero_result_requires_complete_coverage": True,
+                "official_source_verification_required": True,
+                "stable_identifier_deduplication": True,
+            }
+        )
 
     return {
         **contract.to_public_dict(),

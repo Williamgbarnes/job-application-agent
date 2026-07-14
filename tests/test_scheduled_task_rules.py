@@ -22,6 +22,11 @@ def test_scheduled_task_rules_are_public_safe_and_aligned_by_default() -> None:
     assert status["no_private_task_payloads_in_repo"] is True
     assert status["condition_watches_notify_only_on_match"] is True
     assert status["minimum_poll_interval_enforced"] is True
+    assert status["baseline_source_coverage_required_each_run"] is True
+    assert status["conditional_expansion_is_additional_to_baseline"] is True
+    assert status["official_source_verification_required"] is True
+    assert status["stable_identifiers_define_hard_duplicates"] is True
+    assert status["successful_zero_result_requires_complete_coverage"] is True
     assert (
         status["minimum_poll_interval_minutes"]
         == MINIMUM_SCHEDULED_POLL_INTERVAL_MINUTES
